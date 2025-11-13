@@ -8,14 +8,18 @@ import {
   Dimensions,
 } from 'react-native';
 import { TrendingUp, ShoppingBag, Award, DollarSign } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
 export default function DashboardScreen() {
+  const navigation = useNavigation();
+  const userPoints = 850;
+  
   const stats = [
     { icon: ShoppingBag, label: 'Total Orders', value: '24', color: '#3b82f6' },
     { icon: DollarSign, label: 'Total Spent', value: '$1,234', color: '#10b981' },
-    { icon: Award, label: 'Loyalty Points', value: '850', color: '#f59e0b' },
+    { icon: Award, label: 'Loyalty Points', value: userPoints.toString(), color: '#f59e0b' },
     { icon: TrendingUp, label: 'Member Since', value: '2024', color: '#8b5cf6' },
   ];
 
@@ -49,9 +53,12 @@ export default function DashboardScreen() {
           <Award color="#ffffff" size={32} />
           <Text style={styles.pointsTitle}>Loyalty Rewards</Text>
         </View>
-        <Text style={styles.pointsBalance}>850 Points</Text>
+        <Text style={styles.pointsBalance}>{userPoints} Points</Text>
         <Text style={styles.pointsSubtext}>Keep shopping to earn more rewards!</Text>
-        <TouchableOpacity style={styles.redeemButton}>
+        <TouchableOpacity 
+          style={styles.redeemButton}
+          onPress={() => (navigation as any).navigate('Rewards', { points: userPoints })}
+        >
           <Text style={styles.redeemButtonText}>Redeem Points</Text>
         </TouchableOpacity>
       </View>
