@@ -19,7 +19,7 @@ const products = [
     name: 'Premium Vape Pod',
     price: 49.99,
     rating: 4.8,
-    image: 'https://via.placeholder.com/150',
+    image: 'https://images.unsplash.com/photo-1585842378054-ee2e52f94ba2?w=300&h=300&fit=crop',
     category: 'Pods',
   },
   {
@@ -27,7 +27,7 @@ const products = [
     name: 'Starter Kit Pro',
     price: 89.99,
     rating: 4.9,
-    image: 'https://via.placeholder.com/150',
+    image: 'https://images.unsplash.com/photo-1606492199009-b4dc6c60e7f5?w=300&h=300&fit=crop',
     category: 'Kits',
   },
   {
@@ -35,7 +35,7 @@ const products = [
     name: 'E-Liquid 50ml',
     price: 19.99,
     rating: 4.7,
-    image: 'https://via.placeholder.com/150',
+    image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=300&h=300&fit=crop',
     category: 'Liquids',
   },
   {
@@ -43,7 +43,7 @@ const products = [
     name: 'Mesh Coil Pack',
     price: 14.99,
     rating: 4.6,
-    image: 'https://via.placeholder.com/150',
+    image: 'https://images.unsplash.com/photo-1611312449408-fcece27cdbb7?w=300&h=300&fit=crop',
     category: 'Accessories',
   },
 ];
