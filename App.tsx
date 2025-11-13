@@ -3,12 +3,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Home, Package, Clock, MessageCircle } from 'lucide-react-native';
+import { Home, Package, Clock, MessageCircle, ArrowLeftRight } from 'lucide-react-native';
 
 import DashboardScreen from './src/screens/DashboardScreen';
 import ProductsScreen from './src/screens/ProductsScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import SupportScreen from './src/screens/SupportScreen';
+import PointsTransferScreen from './src/screens/PointsTransferScreen';
 
 const Tab = createBottomTabNavigator();
 const queryClient = new QueryClient();
@@ -54,6 +55,15 @@ export default function App() {
               options={{
                 tabBarIcon: ({ color, size }) => (
                   <Clock color={color} size={size} />
+                ),
+              }}
+            />
+            <Tab.Screen
+              name="Points"
+              component={PointsTransferScreen}
+              options={{
+                tabBarIcon: ({ color, size }) => (
+                  <ArrowLeftRight color={color} size={size} />
                 ),
               }}
             />
