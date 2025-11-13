@@ -85,7 +85,7 @@ interface RewardsScreenProps {
 export default function RewardsScreen({ navigation, route }: RewardsScreenProps) {
   const userPoints = route.params?.points || 850;
 
-  const handleRedeem = (product: typeof rewardProducts[0]) => {
+  const handleRedeem = (product: any) => {
     if (userPoints < product.points) {
       Alert.alert(
         'Insufficient Points',
