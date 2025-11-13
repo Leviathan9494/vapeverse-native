@@ -1,0 +1,7 @@
+.expo/
+.git/
+node_modules/
+.gitignore
+assets/
+android/
+ios/
