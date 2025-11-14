@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,54 +7,80 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  ActivityIndicator,
+  TextInput,
 } from 'react-native';
-import { ShoppingCart, Star } from 'lucide-react-native';
+import { ShoppingCart, Star, Search } from 'lucide-react-native';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+import API_URL from '../config/api';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 45) / 2;
 
-const products = [
-  {
-    id: 1,
-    name: 'Premium Vape Pod',
-    price: 49.99,
-    rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1585842378054-ee2e52f94ba2?w=300&h=300&fit=crop',
-    category: 'Pods',
-  },
-  {
-    id: 2,
-    name: 'Starter Kit Pro',
-    price: 89.99,
-    rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1606492199009-b4dc6c60e7f5?w=300&h=300&fit=crop',
-    category: 'Kits',
-  },
-  {
-    id: 3,
-    name: 'E-Liquid 50ml',
-    price: 19.99,
-    rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=300&h=300&fit=crop',
-    category: 'Liquids',
-  },
-  {
-    id: 4,
-    name: 'Mesh Coil Pack',
-    price: 14.99,
-    rating: 4.6,
-    image: 'https://images.unsplash.com/photo-1611312449408-fcece27cdbb7?w=300&h=300&fit=crop',
-    category: 'Accessories',
-  },
-];
+interface Product {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  quantity: number;
+  category: string;
+  subcategory: string;
+  image: string;
+  publishToEcom: boolean;
+}
 
 export default function ProductsScreen() {
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Fetch categories
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const response = await axios.get(`${API_URL}/categories`);
+      return ['All', ...response.data];
+    },
+  });
+
+  // Fetch products
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['products', selectedCategory, page, searchQuery],
+    queryFn: async () => {
+      const params: any = { page, limit: 20 };
+      if (selectedCategory !== 'All') {
+        params.category = selectedCategory;
+      }
+      if (searchQuery) {
+        params.search = searchQuery;
+      }
+      const response = await axios.get(`${API_URL}/products`, { params });
+      return response.data;
+    },
+  });
+
+  const products = data?.products || [];
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Shop Products</Text>
-        <Text style={styles.subtitle}>Discover premium vaping products</Text>
+        <Text style={styles.subtitle}>
+          {data?.total || 0} premium vaping products
+        </Text>
+      </View>
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <Search color="#6b7280" size={20} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search products..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onSubmitEditing={() => refetch()}
+        />
       </View>
 
       {/* Categories */}
@@ -64,18 +90,22 @@ export default function ProductsScreen() {
         style={styles.categoriesContainer}
         contentContainerStyle={styles.categoriesContent}
       >
-        {['All', 'Pods', 'Kits', 'Liquids', 'Accessories'].map((category) => (
+        {(categories || ['All']).map((category) => (
           <TouchableOpacity
             key={category}
             style={[
               styles.categoryChip,
-              category === 'All' && styles.categoryChipActive,
+              category === selectedCategory && styles.categoryChipActive,
             ]}
+            onPress={() => {
+              setSelectedCategory(category);
+              setPage(1);
+            }}
           >
             <Text
               style={[
                 styles.categoryText,
-                category === 'All' && styles.categoryTextActive,
+                category === selectedCategory && styles.categoryTextActive,
               ]}
             >
               {category}
@@ -85,40 +115,104 @@ export default function ProductsScreen() {
       </ScrollView>
 
       {/* Products Grid */}
-      <View style={styles.productsGrid}>
-        {products.map((product) => (
-          <TouchableOpacity key={product.id} style={styles.productCard}>
-            <View style={styles.imageContainer}>
-              <Image
-                source={{ uri: product.image }}
-                style={styles.productImage}
-                resizeMode="cover"
-              />
-            </View>
-            <View style={styles.productInfo}>
-              <Text style={styles.productCategory}>{product.category}</Text>
-              <Text style={styles.productName} numberOfLines={2}>
-                {product.name}
-              </Text>
-              <View style={styles.ratingContainer}>
-                <Star color="#f59e0b" size={14} fill="#f59e0b" />
-                <Text style={styles.ratingText}>{product.rating}</Text>
-              </View>
-              <View style={styles.priceRow}>
-                <Text style={styles.price}>${product.price}</Text>
-                <TouchableOpacity style={styles.addButton}>
-                  <ShoppingCart color="#ffffff" size={16} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text style={styles.loadingText}>Loading products...</Text>
+        </View>
+      ) : (
+        <>
+          <View style={styles.productsGrid}>
+            {products.map((product: Product) => (
+              <TouchableOpacity key={product.id} style={styles.productCard}>
+                <View style={styles.imageContainer}>
+                  <Image
+                    source={{ uri: product.image }}
+                    style={styles.productImage}
+                    resizeMode="cover"
+                  />
+                  {product.quantity === 0 && (
+                    <View style={styles.outOfStockBadge}>
+                      <Text style={styles.outOfStockText}>Out of Stock</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.productInfo}>
+                  <Text style={styles.productCategory}>{product.brand}</Text>
+                  <Text style={styles.productName} numberOfLines={2}>
+                    {product.name}
+                  </Text>
+                  <Text style={styles.subcategoryText} numberOfLines={1}>
+                    {product.category}
+                  </Text>
+                  <View style={styles.priceRow}>
+                    <Text style={styles.price}>${product.price.toFixed(2)}</Text>
+                    <TouchableOpacity 
+                      style={[
+                        styles.addButton,
+                        product.quantity === 0 && styles.addButtonDisabled
+                      ]}
+                      disabled={product.quantity === 0}
+                    >
+                      <ShoppingCart color="#ffffff" size={16} />
+                    </TouchableOpacity>
+                  </View>
+                  {product.quantity > 0 && product.quantity <= 5 && (
+                    <Text style={styles.lowStockText}>
+                      Only {product.quantity} left!
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-      {/* Load More */}
-      <TouchableOpacity style={styles.loadMoreButton}>
-        <Text style={styles.loadMoreText}>Load More Products</Text>
-      </TouchableOpacity>
+          {/* Pagination */}
+          {data && data.totalPages > 1 && (
+            <View style={styles.paginationContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.paginationButton,
+                  page === 1 && styles.paginationButtonDisabled,
+                ]}
+                onPress={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                <Text
+                  style={[
+                    styles.paginationButtonText,
+                    page === 1 && styles.paginationButtonTextDisabled,
+                  ]}
+                >
+                  Previous
+                </Text>
+              </TouchableOpacity>
+
+              <Text style={styles.pageInfo}>
+                Page {page} of {data.totalPages}
+              </Text>
+
+              <TouchableOpacity
+                style={[
+                  styles.paginationButton,
+                  page === data.totalPages && styles.paginationButtonDisabled,
+                ]}
+                onPress={() => setPage((p) => Math.min(data.totalPages, p + 1))}
+                disabled={page === data.totalPages}
+              >
+                <Text
+                  style={[
+                    styles.paginationButtonText,
+                    page === data.totalPages && styles.paginationButtonTextDisabled,
+                  ]}
+                >
+                  Next
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -142,9 +236,26 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 4,
   },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#111827',
+  },
   categoriesContainer: {
     backgroundColor: '#ffffff',
     paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
   categoriesContent: {
     paddingHorizontal: 16,
@@ -166,6 +277,17 @@ const styles = StyleSheet.create({
   },
   categoryTextActive: {
     color: '#ffffff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6b7280',
   },
   productsGrid: {
     flexDirection: 'row',
@@ -193,10 +315,25 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     overflow: 'hidden',
+    position: 'relative',
   },
   productImage: {
     width: '100%',
     height: '100%',
+  },
+  outOfStockBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  outOfStockText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   productInfo: {
     padding: 12,
@@ -212,6 +349,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#111827',
+    marginBottom: 4,
+  },
+  subcategoryText: {
+    fontSize: 11,
+    color: '#6b7280',
     marginBottom: 8,
   },
   ratingContainer: {
@@ -229,6 +371,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 4,
   },
   price: {
     fontSize: 18,
@@ -243,17 +386,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadMoreButton: {
-    margin: 20,
-    marginTop: 0,
-    padding: 16,
+  addButtonDisabled: {
+    backgroundColor: '#9ca3af',
+  },
+  lowStockText: {
+    fontSize: 10,
+    color: '#ef4444',
+    fontWeight: '600',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  paginationButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     backgroundColor: '#3b82f6',
     borderRadius: 8,
-    alignItems: 'center',
   },
-  loadMoreText: {
+  paginationButtonDisabled: {
+    backgroundColor: '#e5e7eb',
+  },
+  paginationButtonText: {
     color: '#ffffff',
-    fontWeight: 'bold',
+    fontWeight: '600',
     fontSize: 14,
+  },
+  paginationButtonTextDisabled: {
+    color: '#9ca3af',
+  },
+  pageInfo: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '600',
   },
 });
