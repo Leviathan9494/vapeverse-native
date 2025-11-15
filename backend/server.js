@@ -37,8 +37,8 @@ function loadProducts() {
             vendor: data.Vendor || '',
             publishToEcom: data['Publish to eCom'] === 'Yes',
             msrp: parseFloat(data.MSRP) || price,
-            // Generate a placeholder image based on category
-            image: getImageForCategory(data.Category),
+            // Generate image based on product name, subcategory, and category
+            image: getImageForProduct(data.Item, data['Subcategory 1'], data.Category),
           });
         }
       })
@@ -51,16 +51,102 @@ function loadProducts() {
   });
 }
 
-// Get appropriate image URL based on category
-function getImageForCategory(category) {
-  const categoryImages = {
-    'E-liquid': 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=300&h=300&fit=crop',
-    'Vape Accessories': 'https://images.unsplash.com/photo-1611312449408-fcece27cdbb7?w=300&h=300&fit=crop',
-    'Dead Stock': 'https://images.unsplash.com/photo-1585842378054-ee2e52f94ba2?w=300&h=300&fit=crop',
-    'Merch': 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=300&h=300&fit=crop',
-    'default': 'https://images.unsplash.com/photo-1606492199009-b4dc6c60e7f5?w=300&h=300&fit=crop'
-  };
-  return categoryImages[category] || categoryImages['default'];
+// Get appropriate image URL based on product name, subcategory, and category
+function getImageForProduct(productName, subcategory, category) {
+  const name = (productName || '').toLowerCase();
+  const subcat = (subcategory || '').toLowerCase();
+  const cat = (category || '').toLowerCase();
+  
+  // Batteries
+  if (name.includes('battery') || name.includes('batteries') || subcat.includes('batteries')) {
+    return 'https://images.unsplash.com/photo-1609592806003-c9ec25c60640?w=300&h=300&fit=crop';
+  }
+  
+  // Chargers
+  if (name.includes('charger') || subcat.includes('chargers')) {
+    return 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=300&h=300&fit=crop';
+  }
+  
+  // E-liquids / Juice
+  if (name.includes('liquid') || name.includes('juice') || name.includes('e-liquid') || 
+      cat.includes('e-liquid') || subcat.includes('free base') || subcat.includes('nic salt')) {
+    return 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=300&h=300&fit=crop';
+  }
+  
+  // Coils
+  if (name.includes('coil') || subcat.includes('coil')) {
+    return 'https://images.unsplash.com/photo-1611312449408-fcece27cdbb7?w=300&h=300&fit=crop';
+  }
+  
+  // Tanks
+  if (name.includes('tank') || subcat.includes('tank')) {
+    return 'https://images.unsplash.com/photo-1585842378054-ee2e52f94ba2?w=300&h=300&fit=crop';
+  }
+  
+  // RDA / RTA / Atomizers
+  if (name.includes('rda') || name.includes('rta') || name.includes('rdta') || 
+      name.includes('atomizer') || subcat.includes('rda') || subcat.includes('rta')) {
+    return 'https://images.unsplash.com/photo-1606492199009-b4dc6c60e7f5?w=300&h=300&fit=crop';
+  }
+  
+  // Drip Tips / Caps
+  if (name.includes('drip tip') || name.includes('cap') || name.includes('510')) {
+    return 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=300&h=300&fit=crop';
+  }
+  
+  // Mods / Devices
+  if (name.includes('mod') || name.includes('device') || name.includes('kit') || name.includes('box')) {
+    return 'https://images.unsplash.com/photo-1585435465661-6dbd35d38366?w=300&h=300&fit=crop';
+  }
+  
+  // Glass / Replacement parts
+  if (name.includes('glass') || name.includes('replacement')) {
+    return 'https://images.unsplash.com/photo-1591290619762-d4c7e5c5d64e?w=300&h=300&fit=crop';
+  }
+  
+  // Cotton / Wicking
+  if (name.includes('cotton') || name.includes('wick')) {
+    return 'https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=300&h=300&fit=crop';
+  }
+  
+  // Wire / Building supplies
+  if (name.includes('wire') || name.includes('clapton') || subcat.includes('rebuildable tools')) {
+    return 'https://images.unsplash.com/photo-1597740985671-2a8a3b11a8e7?w=300&h=300&fit=crop';
+  }
+  
+  // Pods / Pod systems
+  if (name.includes('pod') || name.includes('cartridge')) {
+    return 'https://images.unsplash.com/photo-1564187657-c42e99170d0f?w=300&h=300&fit=crop';
+  }
+  
+  // Tools / Accessories
+  if (name.includes('tool') || name.includes('tweezer') || name.includes('screwdriver') || 
+      name.includes('plier') || subcat.includes('tools')) {
+    return 'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=300&h=300&fit=crop';
+  }
+  
+  // Cases / Storage
+  if (name.includes('case') || name.includes('storage') || name.includes('bag')) {
+    return 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop';
+  }
+  
+  // Merchandise / Apparel
+  if (cat.includes('merch') || name.includes('shirt') || name.includes('hat') || 
+      name.includes('hoodie') || name.includes('apparel')) {
+    return 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=300&h=300&fit=crop';
+  }
+  
+  // Category-based fallbacks
+  if (cat.includes('vape accessories')) {
+    return 'https://images.unsplash.com/photo-1611312449408-fcece27cdbb7?w=300&h=300&fit=crop';
+  }
+  
+  if (cat.includes('dead stock')) {
+    return 'https://images.unsplash.com/photo-1585842378054-ee2e52f94ba2?w=300&h=300&fit=crop';
+  }
+  
+  // Default vape product image
+  return 'https://images.unsplash.com/photo-1606492199009-b4dc6c60e7f5?w=300&h=300&fit=crop';
 }
 
 // API Routes
