@@ -9,8 +9,10 @@ import {
   Dimensions,
   ActivityIndicator,
   TextInput,
+  Alert,
+  Modal,
 } from 'react-native';
-import { ShoppingCart, Star, Search } from 'lucide-react-native';
+import { ShoppingCart, Star, Search, Award, X } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import API_URL from '../config/api';
@@ -23,6 +25,7 @@ interface Product {
   name: string;
   brand: string;
   price: number;
+  pointsCost: number;
   quantity: number;
   category: string;
   subcategory: string;
@@ -34,6 +37,9 @@ export default function ProductsScreen() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userPoints, setUserPoints] = useState(850); // User's available points
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showRedeemModal, setShowRedeemModal] = useState(false);
 
   // Fetch categories
   const { data: categories } = useQuery({
@@ -61,8 +67,48 @@ export default function ProductsScreen() {
   });
 
   const products = data?.products || [];
+
+  // Handle points redemption
+  const handleRedeemWithPoints = (product: Product) => {
+    setSelectedProduct(product);
+    setShowRedeemModal(true);
+  };
+
+  const confirmRedeem = () => {
+    if (!selectedProduct) return;
+
+    if (userPoints >= selectedProduct.pointsCost) {
+      // Deduct points
+      setUserPoints(userPoints - selectedProduct.pointsCost);
+      setShowRedeemModal(false);
+      
+      Alert.alert(
+        '🎉 Redeemed Successfully!',
+        `You've redeemed ${selectedProduct.name} for ${selectedProduct.pointsCost.toLocaleString()} points!\n\nRemaining Points: ${(userPoints - selectedProduct.pointsCost).toLocaleString()}`,
+        [{ text: 'OK' }]
+      );
+    } else {
+      Alert.alert(
+        '❌ Insufficient Points',
+        `You need ${selectedProduct.pointsCost.toLocaleString()} points but only have ${userPoints.toLocaleString()} points.`,
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
+      {/* Points Balance Header */}
+      <View style={styles.pointsHeader}>
+        <View style={styles.pointsRow}>
+          <Award color="#f59e0b" size={24} fill="#f59e0b" />
+          <View style={styles.pointsInfo}>
+            <Text style={styles.pointsLabel}>Your Points Balance</Text>
+            <Text style={styles.pointsValue}>{userPoints.toLocaleString()} pts</Text>
+          </View>
+        </View>
+        <Text style={styles.pointsConversion}>100 points = $1.00</Text>
+      </View>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Shop Products</Text>
@@ -145,8 +191,18 @@ export default function ProductsScreen() {
                   <Text style={styles.subcategoryText} numberOfLines={1}>
                     {product.category}
                   </Text>
-                  <View style={styles.priceRow}>
-                    <Text style={styles.price}>${product.price.toFixed(2)}</Text>
+                  
+                  {/* Price and Points */}
+                  <View style={styles.priceContainer}>
+                    <View>
+                      <Text style={styles.price}>${product.price.toFixed(2)}</Text>
+                      <View style={styles.pointsRow2}>
+                        <Award color="#f59e0b" size={12} fill="#f59e0b" />
+                        <Text style={styles.pointsText}>
+                          {product.pointsCost.toLocaleString()} pts
+                        </Text>
+                      </View>
+                    </View>
                     <TouchableOpacity 
                       style={[
                         styles.addButton,
@@ -157,6 +213,31 @@ export default function ProductsScreen() {
                       <ShoppingCart color="#ffffff" size={16} />
                     </TouchableOpacity>
                   </View>
+
+                  {/* Redeem with Points Button */}
+                  {product.quantity > 0 && (
+                    <TouchableOpacity
+                      style={[
+                        styles.redeemButton,
+                        userPoints < product.pointsCost && styles.redeemButtonDisabled
+                      ]}
+                      onPress={() => handleRedeemWithPoints(product)}
+                      disabled={userPoints < product.pointsCost}
+                    >
+                      <Award 
+                        color={userPoints >= product.pointsCost ? "#ffffff" : "#9ca3af"} 
+                        size={14} 
+                        fill={userPoints >= product.pointsCost ? "#ffffff" : "#9ca3af"}
+                      />
+                      <Text style={[
+                        styles.redeemButtonText,
+                        userPoints < product.pointsCost && styles.redeemButtonTextDisabled
+                      ]}>
+                        Redeem with Points
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
                   {product.quantity > 0 && product.quantity <= 5 && (
                     <Text style={styles.lowStockText}>
                       Only {product.quantity} left!
@@ -213,6 +294,104 @@ export default function ProductsScreen() {
           )}
         </>
       )}
+
+      {/* Redeem Modal */}
+      <Modal
+        visible={showRedeemModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowRedeemModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowRedeemModal(false)}
+            >
+              <X color="#6b7280" size={24} />
+            </TouchableOpacity>
+
+            {selectedProduct && (
+              <>
+                <View style={styles.modalHeader}>
+                  <Award color="#f59e0b" size={48} fill="#f59e0b" />
+                  <Text style={styles.modalTitle}>Redeem with Points</Text>
+                </View>
+
+                <Image
+                  source={{ uri: selectedProduct.image }}
+                  style={styles.modalProductImage}
+                  resizeMode="cover"
+                />
+
+                <Text style={styles.modalProductName}>{selectedProduct.name}</Text>
+                <Text style={styles.modalProductBrand}>{selectedProduct.brand}</Text>
+
+                <View style={styles.modalPriceRow}>
+                  <View style={styles.modalPriceBox}>
+                    <Text style={styles.modalLabel}>Cash Price</Text>
+                    <Text style={styles.modalCashPrice}>${selectedProduct.price.toFixed(2)}</Text>
+                  </View>
+                  <View style={styles.modalPriceBox}>
+                    <Text style={styles.modalLabel}>Points Cost</Text>
+                    <Text style={styles.modalPointsPrice}>
+                      {selectedProduct.pointsCost.toLocaleString()} pts
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.modalBalance}>
+                  <Text style={styles.modalBalanceLabel}>Your Balance:</Text>
+                  <Text style={[
+                    styles.modalBalanceValue,
+                    userPoints < selectedProduct.pointsCost && styles.modalBalanceInsufficient
+                  ]}>
+                    {userPoints.toLocaleString()} pts
+                  </Text>
+                </View>
+
+                {userPoints >= selectedProduct.pointsCost ? (
+                  <View style={styles.modalAfterBalance}>
+                    <Text style={styles.modalAfterLabel}>After Redemption:</Text>
+                    <Text style={styles.modalAfterValue}>
+                      {(userPoints - selectedProduct.pointsCost).toLocaleString()} pts
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.modalInsufficientText}>
+                    ❌ You need {(selectedProduct.pointsCost - userPoints).toLocaleString()} more points
+                  </Text>
+                )}
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={styles.modalCancelButton}
+                    onPress={() => setShowRedeemModal(false)}
+                  >
+                    <Text style={styles.modalCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.modalConfirmButton,
+                      userPoints < selectedProduct.pointsCost && styles.modalConfirmButtonDisabled
+                    ]}
+                    onPress={confirmRedeem}
+                    disabled={userPoints < selectedProduct.pointsCost}
+                  >
+                    <Award color="#ffffff" size={16} fill="#ffffff" />
+                    <Text style={[
+                      styles.modalConfirmText,
+                      userPoints < selectedProduct.pointsCost && styles.modalConfirmTextDisabled
+                    ]}>
+                      Confirm Redemption
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -424,5 +603,243 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     fontWeight: '600',
+  },
+  // Points header styles
+  pointsHeader: {
+    backgroundColor: '#fef3c7',
+    padding: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: '#f59e0b',
+  },
+  pointsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  pointsInfo: {
+    marginLeft: 12,
+  },
+  pointsLabel: {
+    fontSize: 12,
+    color: '#92400e',
+    fontWeight: '600',
+  },
+  pointsValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#92400e',
+  },
+  pointsConversion: {
+    fontSize: 11,
+    color: '#78350f',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  // Product card price/points styles
+  priceContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  pointsRow2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  pointsText: {
+    fontSize: 11,
+    color: '#f59e0b',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  redeemButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f59e0b',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginTop: 4,
+    gap: 6,
+  },
+  redeemButtonDisabled: {
+    backgroundColor: '#e5e7eb',
+  },
+  redeemButtonText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  redeemButtonTextDisabled: {
+    color: '#9ca3af',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    position: 'relative',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
+    padding: 4,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginTop: 12,
+  },
+  modalProductImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  modalProductName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  modalProductBrand: {
+    fontSize: 14,
+    color: '#3b82f6',
+    fontWeight: '600',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalPriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    gap: 12,
+  },
+  modalPriceBox: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalLabel: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginBottom: 4,
+    fontWeight: '600',
+  },
+  modalCashPrice: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  modalPointsPrice: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#f59e0b',
+  },
+  modalBalance: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  modalBalanceLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '600',
+  },
+  modalBalanceValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#10b981',
+  },
+  modalBalanceInsufficient: {
+    color: '#ef4444',
+  },
+  modalAfterBalance: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  modalAfterLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  modalAfterValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#6b7280',
+  },
+  modalInsufficientText: {
+    fontSize: 14,
+    color: '#ef4444',
+    textAlign: 'center',
+    marginBottom: 16,
+    fontWeight: '600',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#6b7280',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  modalConfirmButton: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#f59e0b',
+    gap: 8,
+  },
+  modalConfirmButtonDisabled: {
+    backgroundColor: '#e5e7eb',
+  },
+  modalConfirmText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  modalConfirmTextDisabled: {
+    color: '#9ca3af',
   },
 });

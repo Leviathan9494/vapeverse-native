@@ -25,11 +25,15 @@ function loadProducts() {
         
         // Only include items with valid data and positive price
         if (data.Item && price > 0 && data.Brand) {
+          // Calculate points cost (100 points = $1, so multiply price by 100)
+          const pointsCost = Math.round(price * 100);
+          
           results.push({
             id: data['System ID'] || Math.random().toString(36).substr(2, 9),
             name: data.Item,
             brand: data.Brand,
             price: price,
+            pointsCost: pointsCost, // Points needed to redeem this product
             quantity: qty,
             sku: data['Custom SKU'] || '',
             category: data.Category || 'Uncategorized',
