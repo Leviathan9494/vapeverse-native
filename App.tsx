@@ -13,6 +13,7 @@ import SupportScreen from './src/screens/SupportScreen';
 import PointsTransferScreen from './src/screens/PointsTransferScreen';
 import GamingScreen from './src/screens/GamingScreen';
 import RewardsScreen from './src/screens/RewardsScreen';
+import PokerGameScreen from './src/screens/PokerGameScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -102,6 +103,11 @@ export default function App() {
               name="Rewards" 
               component={RewardsScreen}
               options={{ headerShown: true, title: 'Rewards Store' }}
+            />
+            <Stack.Screen 
+              name="PokerGame" 
+              component={PokerGameScreen}
+              options={{ headerShown: false }}
             />
           </Stack.Navigator>
         </NavigationContainer>

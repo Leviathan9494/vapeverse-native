@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Dices, Trophy, Coins, X } from 'lucide-react-native';
 
-export default function GamingScreen() {
+export default function GamingScreen({ navigation }: any) {
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [userPoints, setUserPoints] = useState(850);
   const [bet, setBet] = useState(50);
@@ -56,7 +56,17 @@ export default function GamingScreen() {
       return;
     }
 
-    // Simulate game result (60% chance to win)
+    // Navigate to full poker game
+    if (gameId === 'poker') {
+      setSelectedGame(null);
+      navigation.navigate('PokerGame', {
+        userPoints: userPoints,
+        onPointsChange: (newPoints: number) => setUserPoints(newPoints),
+      });
+      return;
+    }
+
+    // Simulate game result for other games (60% chance to win)
     const won = Math.random() > 0.4;
     const winAmount = won ? bet * 2 : 0;
 
