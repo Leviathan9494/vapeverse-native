@@ -12,14 +12,14 @@ import { Send, Gift, User, ArrowRight } from 'lucide-react-native';
 
 export default function PointsTransferScreen() {
   const [activeTab, setActiveTab] = useState<'transfer' | 'donate'>('transfer');
-  const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState('');
   const [points, setPoints] = useState('');
   const [message, setMessage] = useState('');
 
   const userPoints = 850; // This would come from your API
 
   const handleTransfer = () => {
-    if (!recipientEmail || !points) {
+    if (!recipientPhone || !points) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
@@ -37,7 +37,7 @@ export default function PointsTransferScreen() {
 
     Alert.alert(
       'Confirm Transfer',
-      `Transfer ${pointsNum} points to ${recipientEmail}?`,
+      `Transfer ${pointsNum} points to ${recipientPhone}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -45,7 +45,7 @@ export default function PointsTransferScreen() {
           onPress: () => {
             // API call would go here
             Alert.alert('Success', 'Points transferred successfully!');
-            setRecipientEmail('');
+            setRecipientPhone('');
             setPoints('');
             setMessage('');
           },
@@ -129,15 +129,15 @@ export default function PointsTransferScreen() {
             <Text style={styles.sectionTitle}>Transfer Points to Another User</Text>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Recipient Email</Text>
+              <Text style={styles.label}>Recipient Phone Number</Text>
               <View style={styles.inputContainer}>
                 <User color="#9ca3af" size={20} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter recipient's email"
-                  value={recipientEmail}
-                  onChangeText={setRecipientEmail}
-                  keyboardType="email-address"
+                  placeholder="Enter phone number (e.g., 555-123-4567)"
+                  value={recipientPhone}
+                  onChangeText={setRecipientPhone}
+                  keyboardType="phone-pad"
                   autoCapitalize="none"
                 />
               </View>
@@ -236,8 +236,8 @@ export default function PointsTransferScreen() {
       <View style={styles.recentSection}>
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
         {[
-          { type: 'sent', to: 'user@example.com', amount: 50, date: '2 days ago' },
-          { type: 'received', from: 'friend@example.com', amount: 100, date: '5 days ago' },
+          { type: 'sent', to: '555-123-4567', amount: 50, date: '2 days ago' },
+          { type: 'received', from: '555-987-6543', amount: 100, date: '5 days ago' },
           { type: 'donated', amount: 25, date: '1 week ago' },
         ].map((transaction, index) => (
           <View key={index} style={styles.transactionCard}>
