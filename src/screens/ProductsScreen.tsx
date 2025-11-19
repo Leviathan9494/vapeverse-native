@@ -233,54 +233,15 @@ export default function ProductsScreen({ navigation }: any) {
                   </Text>
                   
                   {/* Price and Points */}
-                  <View style={styles.priceContainer}>
-                    <View>
-                      <Text style={styles.price}>${product.price.toFixed(2)}</Text>
-                      <View style={styles.pointsRow2}>
-                        <Award color="#f59e0b" size={12} fill="#f59e0b" />
-                        <Text style={styles.pointsText}>
-                          {product.pointsCost.toLocaleString()} pts
-                        </Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity 
-                      style={[
-                        styles.addButton,
-                        product.quantity === 0 && styles.addButtonDisabled
-                      ]}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleAddToCart(product);
-                      }}
-                      disabled={product.quantity === 0}
-                    >
-                      <Plus color="#ffffff" size={18} />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Redeem with Points Button */}
-                  {product.quantity > 0 && (
-                    <TouchableOpacity
-                      style={[
-                        styles.redeemButton,
-                        userPoints < product.pointsCost && styles.redeemButtonDisabled
-                      ]}
-                      onPress={() => handleRedeemWithPoints(product)}
-                      disabled={userPoints < product.pointsCost}
-                    >
-                      <Award 
-                        color={userPoints >= product.pointsCost ? "#ffffff" : "#9ca3af"} 
-                        size={14} 
-                        fill={userPoints >= product.pointsCost ? "#ffffff" : "#9ca3af"}
-                      />
-                      <Text style={[
-                        styles.redeemButtonText,
-                        userPoints < product.pointsCost && styles.redeemButtonTextDisabled
-                      ]}>
-                        Redeem with Points
+                  <View style={styles.priceRow}>
+                    <Text style={styles.price}>${product.price.toFixed(2)}</Text>
+                    <View style={styles.pointsRow2}>
+                      <Award color="#f59e0b" size={12} fill="#f59e0b" />
+                      <Text style={styles.pointsText}>
+                        {product.pointsCost.toLocaleString()} pts
                       </Text>
-                    </TouchableOpacity>
-                  )}
+                    </View>
+                  </View>
 
                   {product.quantity > 0 && product.quantity <= 5 && (
                     <Text style={styles.lowStockText}>
@@ -673,26 +634,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   price: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#111827',
-  },
-  addButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#3b82f6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addButtonDisabled: {
-    backgroundColor: '#9ca3af',
+    marginBottom: 4,
   },
   lowStockText: {
     fontSize: 10,
@@ -761,13 +709,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
-  // Product card price/points styles
-  priceContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
   pointsRow2: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -778,28 +719,6 @@ const styles = StyleSheet.create({
     color: '#f59e0b',
     fontWeight: '600',
     marginLeft: 4,
-  },
-  redeemButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f59e0b',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    marginTop: 4,
-    gap: 6,
-  },
-  redeemButtonDisabled: {
-    backgroundColor: '#e5e7eb',
-  },
-  redeemButtonText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  redeemButtonTextDisabled: {
-    color: '#9ca3af',
   },
   // Modal styles
   modalOverlay: {
