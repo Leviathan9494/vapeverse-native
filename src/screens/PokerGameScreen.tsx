@@ -418,7 +418,7 @@ export default function PokerGameScreen({ navigation, route }: any) {
 
       {/* Action Buttons */}
       <View style={styles.actionSection}>
-        {gamePhase === 'betting' && gameChips === 0 && (
+        {gamePhase === 'betting' && (
           <>
             <Text style={styles.chipSelectionTitle}>Select Game Chips</Text>
             <Text style={styles.chipSelectionSubtitle}>
