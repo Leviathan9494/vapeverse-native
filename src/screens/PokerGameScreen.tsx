@@ -37,8 +37,8 @@ export default function PokerGameScreen({ navigation, route }: any) {
   const [gamePhase, setGamePhase] = useState<GamePhase>('betting');
   const [pot, setPot] = useState(0);
   const [currentBet, setCurrentBet] = useState(0);
-  const [playerBet, setPlayerBet] = useState(50);
   const [gameChips, setGameChips] = useState(0); // Chips allocated for this game session
+  const SMALL_BLIND = 25; // Fixed small blind amount
   const [players, setPlayers] = useState<Player[]>([]);
   const [communityCards, setCommunityCards] = useState<Card[]>([]);
   const [deck, setDeck] = useState<Card[]>([]);
@@ -80,8 +80,8 @@ export default function PokerGameScreen({ navigation, route }: any) {
       return;
     }
 
-    if (playerBet > gameChips) {
-      Alert.alert('Insufficient Chips', 'You don\'t have enough chips for this game');
+    if (SMALL_BLIND > gameChips) {
+      Alert.alert('Insufficient Chips', `You need at least ${SMALL_BLIND} chips to play`);
       return;
     }
 
@@ -105,8 +105,8 @@ export default function PokerGameScreen({ navigation, route }: any) {
 
     setPlayerHand(hands[0]);
     setDeck(newDeck);
-    setPot(playerBet * 4); // All players match the bet
-    setCurrentBet(playerBet);
+    setPot(SMALL_BLIND * 4); // All players match the small blind
+    setCurrentBet(SMALL_BLIND);
     setGamePhase('preflop');
     setMessage('Check your cards. Call, Raise, or Fold?');
     setCanCheck(true);
@@ -115,8 +115,8 @@ export default function PokerGameScreen({ navigation, route }: any) {
     const updatedPlayers = initialPlayers.map((player, index) => ({
       ...player,
       cards: hands[index],
-      currentBet: playerBet,
-      chips: player.chips - playerBet,
+      currentBet: SMALL_BLIND,
+      chips: player.chips - SMALL_BLIND,
     }));
     setPlayers(updatedPlayers);
   };
@@ -435,7 +435,6 @@ export default function PokerGameScreen({ navigation, route }: any) {
                   ]}
                   onPress={() => {
                     setGameChips(amount);
-                    setPlayerBet(Math.min(50, amount));
                   }}
                   disabled={amount > userPoints}
                 >
@@ -473,47 +472,23 @@ export default function PokerGameScreen({ navigation, route }: any) {
             <TouchableOpacity 
               style={[
                 styles.confirmChipsButton,
-                gameChips === 0 && styles.confirmChipsButtonDisabled
+                (gameChips === 0 || gameChips < SMALL_BLIND) && styles.confirmChipsButtonDisabled
               ]} 
               onPress={() => {
-                if (gameChips > 0) {
-                  setMessage('Place your initial bet to start the game');
+                if (gameChips >= SMALL_BLIND) {
+                  startGame();
                 }
               }}
-              disabled={gameChips === 0}
+              disabled={gameChips === 0 || gameChips < SMALL_BLIND}
             >
               <Text style={styles.confirmChipsButtonText}>
-                Confirm {gameChips} Points
+                Start Game with {gameChips} Points
               </Text>
             </TouchableOpacity>
           </>
         )}
         
-        {gamePhase === 'betting' && gameChips > 0 && (
-          <>
-            <View style={styles.betControls}>
-              <TouchableOpacity
-                style={styles.betButton}
-                onPress={() => setPlayerBet(Math.max(25, playerBet - 25))}
-              >
-                <Text style={styles.betButtonText}>-</Text>
-              </TouchableOpacity>
-              <View style={styles.betDisplay}>
-                <Text style={styles.betAmount}>{playerBet}</Text>
-                <Text style={styles.betLabel}>initial bet</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.betButton}
-                onPress={() => setPlayerBet(Math.min(gameChips, playerBet + 25))}
-              >
-                <Text style={styles.betButtonText}>+</Text>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity style={styles.startButton} onPress={startGame}>
-              <Text style={styles.startButtonText}>Start Game</Text>
-            </TouchableOpacity>
-          </>
-        )}
+
 
         {(gamePhase === 'preflop' || gamePhase === 'flop' || gamePhase === 'turn' || gamePhase === 'river') && (
           <View style={styles.gameActions}>

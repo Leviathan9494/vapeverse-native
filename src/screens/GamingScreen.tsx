@@ -5,15 +5,11 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
-  Modal,
 } from 'react-native';
-import { Dices, Trophy, Coins, X } from 'lucide-react-native';
+import { Trophy, Coins } from 'lucide-react-native';
 
 export default function GamingScreen({ navigation }: any) {
-  const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [userPoints, setUserPoints] = useState(850);
-  const [bet, setBet] = useState(50);
 
   const games = [
     {
@@ -50,126 +46,22 @@ export default function GamingScreen({ navigation }: any) {
     },
   ];
 
-  const playGame = (gameId: string, gameName: string) => {
-    if (bet > userPoints) {
-      Alert.alert('Insufficient Points', 'You don\'t have enough points to play');
-      return;
-    }
+  const playGame = (gameId: string) => {
+    // Navigate to appropriate game screen with chip buy-in system
+    const gameRoutes: Record<string, string> = {
+      poker: 'PokerGame',
+      roulette: 'RouletteGame',
+      blackjack: 'BlackjackGame',
+      slots: 'SlotsGame',
+    };
 
-    // Navigate to full poker game
-    if (gameId === 'poker') {
-      setSelectedGame(null);
-      navigation.navigate('PokerGame', {
+    const routeName = gameRoutes[gameId];
+    if (routeName) {
+      navigation.navigate(routeName, {
         userPoints: userPoints,
         onPointsChange: (newPoints: number) => setUserPoints(newPoints),
       });
-      return;
     }
-
-    // Simulate game result for other games (60% chance to win)
-    const won = Math.random() > 0.4;
-    const winAmount = won ? bet * 2 : 0;
-
-    setSelectedGame(null);
-
-    setTimeout(() => {
-      if (won) {
-        setUserPoints(userPoints - bet + winAmount);
-        Alert.alert(
-          '🎉 You Won!',
-          `Congratulations! You won ${winAmount} points!`,
-          [{ text: 'Play Again' }]
-        );
-      } else {
-        setUserPoints(userPoints - bet);
-        Alert.alert(
-          '😔 Better Luck Next Time',
-          `You lost ${bet} points. Try again!`,
-          [{ text: 'Try Again' }]
-        );
-      }
-    }, 500);
-  };
-
-  const renderGameModal = () => {
-    const game = games.find(g => g.id === selectedGame);
-    if (!game) return null;
-
-    return (
-      <Modal
-        visible={selectedGame !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setSelectedGame(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setSelectedGame(null)}
-            >
-              <X color="#9ca3af" size={24} />
-            </TouchableOpacity>
-
-            <Text style={styles.modalTitle}>{game.icon} {game.name}</Text>
-            <Text style={styles.modalDescription}>{game.description}</Text>
-
-            <View style={styles.betSection}>
-              <Text style={styles.betLabel}>Your Bet</Text>
-              <View style={styles.betControls}>
-                <TouchableOpacity
-                  style={styles.betButton}
-                  onPress={() => setBet(Math.max(game.minBet, bet - 10))}
-                >
-                  <Text style={styles.betButtonText}>-</Text>
-                </TouchableOpacity>
-                <View style={styles.betDisplay}>
-                  <Text style={styles.betAmount}>{bet}</Text>
-                  <Text style={styles.betCurrency}>points</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.betButton}
-                  onPress={() => setBet(Math.min(userPoints, bet + 10))}
-                >
-                  <Text style={styles.betButtonText}>+</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.betInfo}>Min bet: {game.minBet} points</Text>
-            </View>
-
-            <View style={styles.quickBets}>
-              {[game.minBet, 50, 100, 200].map((amount) => (
-                <TouchableOpacity
-                  key={amount}
-                  style={[
-                    styles.quickBetButton,
-                    bet === amount && styles.quickBetButtonActive,
-                  ]}
-                  onPress={() => setBet(Math.min(amount, userPoints))}
-                >
-                  <Text
-                    style={[
-                      styles.quickBetText,
-                      bet === amount && styles.quickBetTextActive,
-                    ]}
-                  >
-                    {amount}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={[styles.playButton, { backgroundColor: game.color }]}
-              onPress={() => playGame(game.id, game.name)}
-            >
-              <Dices color="#ffffff" size={24} />
-              <Text style={styles.playButtonText}>Play Now</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    );
   };
 
   return (
@@ -192,7 +84,7 @@ export default function GamingScreen({ navigation }: any) {
           <TouchableOpacity
             key={game.id}
             style={[styles.gameCard, { borderColor: game.color }]}
-            onPress={() => setSelectedGame(game.id)}
+            onPress={() => playGame(game.id)}
           >
             <Text style={styles.gameIcon}>{game.icon}</Text>
             <Text style={styles.gameName}>{game.name}</Text>
@@ -258,7 +150,6 @@ export default function GamingScreen({ navigation }: any) {
         </Text>
       </View>
 
-      {renderGameModal()}
     </ScrollView>
   );
 }
@@ -429,123 +320,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     lineHeight: 22,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    minHeight: 400,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    padding: 8,
-    zIndex: 10,
-  },
-  modalTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  modalDescription: {
-    fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  betSection: {
-    marginBottom: 24,
-  },
-  betLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  betControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
-  },
-  betButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#f3f4f6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  betButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  betDisplay: {
-    alignItems: 'center',
-  },
-  betAmount: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  betCurrency: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  betInfo: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  quickBets: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 24,
-  },
-  quickBetButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#f3f4f6',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  quickBetButtonActive: {
-    backgroundColor: '#eff6ff',
-    borderColor: '#3b82f6',
-  },
-  quickBetText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6b7280',
-  },
-  quickBetTextActive: {
-    color: '#3b82f6',
-  },
-  playButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  playButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
 });

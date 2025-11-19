@@ -14,6 +14,9 @@ import PointsTransferScreen from './src/screens/PointsTransferScreen';
 import GamingScreen from './src/screens/GamingScreen';
 import RewardsScreen from './src/screens/RewardsScreen';
 import PokerGameScreen from './src/screens/PokerGameScreen';
+import RouletteGameScreen from './src/screens/RouletteGameScreen';
+import BlackjackGameScreen from './src/screens/BlackjackGameScreen';
+import SlotsGameScreen from './src/screens/SlotsGameScreen';
 import CartScreen from './src/screens/CartScreen';
 import { CartProvider } from './src/context/CartContext';
 
@@ -110,6 +113,21 @@ export default function App() {
               <Stack.Screen 
                 name="PokerGame" 
                 component={PokerGameScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen 
+                name="RouletteGame" 
+                component={RouletteGameScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen 
+                name="BlackjackGame" 
+                component={BlackjackGameScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen 
+                name="SlotsGame" 
+                component={SlotsGameScreen}
                 options={{ headerShown: false }}
               />
               <Stack.Screen 
