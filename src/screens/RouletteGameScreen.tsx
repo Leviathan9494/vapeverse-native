@@ -10,11 +10,12 @@ import {
 } from 'react-native';
 import { ArrowLeft, Coins } from 'lucide-react-native';
 
-type BetType = 'red' | 'black' | 'green' | number;
-
 interface Bet {
-  type: BetType;
+  spot: string;
   amount: number;
+  type: 'straight' | 'color' | 'even-odd' | 'low-high' | 'dozen' | 'column';
+  numbers: number[];
+  payout: number;
 }
 
 export default function RouletteGameScreen({ navigation, route }: any) {
@@ -22,14 +23,27 @@ export default function RouletteGameScreen({ navigation, route }: any) {
   const [gameChips, setGameChips] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
   const [remainingChips, setRemainingChips] = useState(0);
-  const [currentBets, setCurrentBets] = useState<Bet[]>([]);
+  const [chipValue, setChipValue] = useState(10);
+  const [bets, setBets] = useState<Map<string, Bet>>(new Map());
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<number | null>(null);
   const [spinAnimation] = useState(new Animated.Value(0));
+  const [winningSpots, setWinningSpots] = useState<Set<string>>(new Set());
 
   const MIN_CHIPS = 10;
   const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
   const blackNumbers = [2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35];
+  
+  const getNumberColor = (num: number): 'red' | 'black' | 'green' => {
+    if (num === 0) return 'green';
+    return redNumbers.includes(num) ? 'red' : 'black';
+  };
+  
+  const rouletteLayout = [
+    [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36],
+    [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35],
+    [1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34],
+  ];
 
   const startGame = () => {
     if (gameChips < MIN_CHIPS) {
@@ -40,30 +54,43 @@ export default function RouletteGameScreen({ navigation, route }: any) {
     setRemainingChips(gameChips);
   };
 
-  const placeBet = (type: BetType, amount: number) => {
-    if (amount > remainingChips) {
+  const placeBet = (spot: string, numbers: number[], type: 'straight' | 'color' | 'even-odd' | 'low-high' | 'dozen' | 'column', payout: number) => {
+    if (chipValue > remainingChips) {
       Alert.alert('Insufficient Chips', 'Not enough chips for this bet');
       return;
     }
 
-    const newBet: Bet = { type, amount };
-    setCurrentBets([...currentBets, newBet]);
-    setRemainingChips(remainingChips - amount);
+    const newBets = new Map(bets);
+    if (newBets.has(spot)) {
+      const existing = newBets.get(spot)!;
+      newBets.set(spot, {
+        ...existing,
+        amount: existing.amount + chipValue,
+      });
+    } else {
+      newBets.set(spot, { spot, amount: chipValue, type, numbers, payout });
+    }
+    
+    setBets(newBets);
+    setRemainingChips(remainingChips - chipValue);
   };
 
   const clearBets = () => {
-    const totalBets = currentBets.reduce((sum, bet) => sum + bet.amount, 0);
+    const totalBets = Array.from(bets.values()).reduce((sum, bet) => sum + bet.amount, 0);
     setRemainingChips(remainingChips + totalBets);
-    setCurrentBets([]);
+    setBets(new Map());
+    setWinningSpots(new Set());
+    setResult(null);
   };
 
   const spin = () => {
-    if (currentBets.length === 0) {
+    if (bets.size === 0) {
       Alert.alert('No Bets', 'Place at least one bet before spinning');
       return;
     }
 
     setSpinning(true);
+    setWinningSpots(new Set());
     
     // Animate spin
     Animated.timing(spinAnimation, {
@@ -75,23 +102,18 @@ export default function RouletteGameScreen({ navigation, route }: any) {
       const spinResult = Math.floor(Math.random() * 37); // 0-36
       setResult(spinResult);
       
-      // Calculate winnings
+      // Calculate winnings and mark winning spots
       let winnings = 0;
-      currentBets.forEach(bet => {
-        if (typeof bet.type === 'number' && bet.type === spinResult) {
-          // Straight bet pays 35:1
-          winnings += bet.amount * 36;
-        } else if (bet.type === 'red' && redNumbers.includes(spinResult)) {
-          // Color bet pays 1:1
-          winnings += bet.amount * 2;
-        } else if (bet.type === 'black' && blackNumbers.includes(spinResult)) {
-          winnings += bet.amount * 2;
-        } else if (bet.type === 'green' && spinResult === 0) {
-          // Green (0) pays 35:1
-          winnings += bet.amount * 36;
+      const winning = new Set<string>();
+      
+      bets.forEach((bet, spot) => {
+        if (bet.numbers.includes(spinResult)) {
+          winnings += bet.amount * bet.payout;
+          winning.add(spot);
         }
       });
 
+      setWinningSpots(winning);
       const finalChips = remainingChips + winnings;
       const totalPointsChange = userPoints - gameChips + finalChips;
 
@@ -105,6 +127,11 @@ export default function RouletteGameScreen({ navigation, route }: any) {
             '🎉 Winner!',
             `Ball landed on ${spinResult}!\nYou won ${winnings} chips!\n\nFinal chips: ${finalChips}`,
             [
+              { text: 'Play Again', onPress: () => {
+                setBets(new Map());
+                setWinningSpots(new Set());
+                setRemainingChips(finalChips);
+              }},
               {
                 text: 'Leave Table',
                 onPress: () => {
@@ -121,9 +148,9 @@ export default function RouletteGameScreen({ navigation, route }: any) {
             finalChips >= MIN_CHIPS
               ? [
                   { text: 'Play Again', onPress: () => {
-                    setCurrentBets([]);
+                    setBets(new Map());
+                    setWinningSpots(new Set());
                     setRemainingChips(finalChips);
-                    setResult(null);
                   }},
                   {
                     text: 'Leave Table',
@@ -148,7 +175,7 @@ export default function RouletteGameScreen({ navigation, route }: any) {
     });
   };
 
-  const getNumberColor = (num: number) => {
+  const getNumberColorHex = (num: number) => {
     if (num === 0) return '#10b981';
     if (redNumbers.includes(num)) return '#ef4444';
     return '#1f2937';
@@ -220,10 +247,11 @@ export default function RouletteGameScreen({ navigation, route }: any) {
 
   const renderBettingTable = () => (
     <View style={styles.gameContainer}>
-      <View style={styles.rouletteWheel}>
+      {/* Spinning Wheel */}
+      <View style={styles.wheelContainer}>
         <Animated.View
           style={[
-            styles.wheelCenter,
+            styles.wheel,
             {
               transform: [
                 {
@@ -239,63 +267,185 @@ export default function RouletteGameScreen({ navigation, route }: any) {
           <Text style={styles.wheelNumber}>
             {result !== null ? result : '?'}
           </Text>
+          {result !== null && (
+            <View style={[styles.wheelColorDot, { backgroundColor: getNumberColorHex(result) }]} />
+          )}
         </Animated.View>
       </View>
 
-      <View style={styles.bettingArea}>
-        <Text style={styles.sectionTitle}>Place Your Bets</Text>
-        
-        <View style={styles.colorBets}>
-          <TouchableOpacity
-            style={[styles.colorBet, { backgroundColor: '#ef4444' }]}
-            onPress={() => placeBet('red', MIN_CHIPS)}
-            disabled={spinning || remainingChips < MIN_CHIPS}
-          >
-            <Text style={styles.colorBetText}>RED</Text>
-            <Text style={styles.colorBetOdds}>2:1</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.colorBet, { backgroundColor: '#1f2937' }]}
-            onPress={() => placeBet('black', MIN_CHIPS)}
-            disabled={spinning || remainingChips < MIN_CHIPS}
-          >
-            <Text style={styles.colorBetText}>BLACK</Text>
-            <Text style={styles.colorBetOdds}>2:1</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.colorBet, { backgroundColor: '#10b981' }]}
-            onPress={() => placeBet('green', MIN_CHIPS)}
-            disabled={spinning || remainingChips < MIN_CHIPS}
-          >
-            <Text style={styles.colorBetText}>0 GREEN</Text>
-            <Text style={styles.colorBetOdds}>36:1</Text>
-          </TouchableOpacity>
-        </View>
+      <Text style={styles.tableTitle}>Place Your Chips on the Table</Text>
 
-        <View style={styles.currentBetsContainer}>
-          <Text style={styles.currentBetsTitle}>Current Bets:</Text>
-          {currentBets.length === 0 ? (
-            <Text style={styles.noBetsText}>No bets placed</Text>
-          ) : (
-            currentBets.map((bet, index) => (
-              <Text key={index} style={styles.betText}>
-                {typeof bet.type === 'number' ? `#${bet.type}` : bet.type.toUpperCase()}: {bet.amount} chips
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={styles.rouletteTable}>
+          {/* Zero */}
+          <TouchableOpacity
+            style={[
+              styles.zeroCell,
+              winningSpots.has('0') && styles.winningCell,
+              bets.has('0') && styles.betPlacedCell,
+            ]}
+            onPress={() => placeBet('0', [0], 'straight', 36)}
+            disabled={spinning}
+          >
+            <Text style={styles.zeroText}>0</Text>
+            {bets.has('0') && (
+              <View style={styles.chipIndicator}>
+                <Text style={styles.chipAmount}>{bets.get('0')!.amount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Number Grid */}
+          <View style={styles.numberGrid}>
+            {rouletteLayout.map((row, rowIndex) => (
+              <View key={rowIndex} style={styles.tableRow}>
+                {row.map((num) => (
+                  <TouchableOpacity
+                    key={num}
+                    style={[
+                      styles.numberCell,
+                      { backgroundColor: getNumberColorHex(num) },
+                      winningSpots.has(String(num)) && styles.winningCell,
+                      bets.has(String(num)) && styles.betPlacedCell,
+                    ]}
+                    onPress={() => placeBet(String(num), [num], 'straight', 36)}
+                    disabled={spinning}
+                  >
+                    <Text style={styles.numberText}>{num}</Text>
+                    {bets.has(String(num)) && (
+                      <View style={styles.chipIndicator}>
+                        <Text style={styles.chipAmount}>{bets.get(String(num))!.amount}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+                {/* 2:1 Column Bet */}
+                <TouchableOpacity
+                  style={[
+                    styles.columnCell,
+                    winningSpots.has(`col-${rowIndex}`) && styles.winningCell,
+                    bets.has(`col-${rowIndex}`) && styles.betPlacedCell,
+                  ]}
+                  onPress={() => placeBet(`col-${rowIndex}`, row, 'column', 3)}
+                  disabled={spinning}
+                >
+                  <Text style={styles.sideText}>2:1</Text>
+                  {bets.has(`col-${rowIndex}`) && (
+                    <View style={styles.chipIndicator}>
+                      <Text style={styles.chipAmount}>{bets.get(`col-${rowIndex}`)!.amount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+
+          {/* Bottom Bets */}
+          <View style={styles.bottomBets}>
+            {/* Dozens */}
+            <View style={styles.dozenRow}>
+              {[
+                { label: '1st 12', numbers: Array.from({ length: 12 }, (_, i) => i + 1), spot: '1st12' },
+                { label: '2nd 12', numbers: Array.from({ length: 12 }, (_, i) => i + 13), spot: '2nd12' },
+                { label: '3rd 12', numbers: Array.from({ length: 12 }, (_, i) => i + 25), spot: '3rd12' },
+              ].map((dozen) => (
+                <TouchableOpacity
+                  key={dozen.spot}
+                  style={[
+                    styles.dozenCell,
+                    winningSpots.has(dozen.spot) && styles.winningCell,
+                    bets.has(dozen.spot) && styles.betPlacedCell,
+                  ]}
+                  onPress={() => placeBet(dozen.spot, dozen.numbers, 'dozen', 3)}
+                  disabled={spinning}
+                >
+                  <Text style={styles.bottomText}>{dozen.label}</Text>
+                  {bets.has(dozen.spot) && (
+                    <View style={styles.chipIndicator}>
+                      <Text style={styles.chipAmount}>{bets.get(dozen.spot)!.amount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Even Money Bets */}
+            <View style={styles.evenMoneyRow}>
+              {[
+                { label: '1-18', numbers: Array.from({ length: 18 }, (_, i) => i + 1), spot: '1-18' },
+                { label: 'EVEN', numbers: [2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36], spot: 'even' },
+                { label: 'RED', numbers: redNumbers, spot: 'red', color: '#ef4444' },
+                { label: 'BLACK', numbers: blackNumbers, spot: 'black', color: '#1f2937' },
+                { label: 'ODD', numbers: [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35], spot: 'odd' },
+                { label: '19-36', numbers: Array.from({ length: 18 }, (_, i) => i + 19), spot: '19-36' },
+              ].map((bet) => (
+                <TouchableOpacity
+                  key={bet.spot}
+                  style={[
+                    styles.evenMoneyCell,
+                    bet.color && { backgroundColor: bet.color },
+                    winningSpots.has(bet.spot) && styles.winningCell,
+                    bets.has(bet.spot) && styles.betPlacedCell,
+                  ]}
+                  onPress={() => placeBet(bet.spot, bet.numbers, bet.spot === 'red' || bet.spot === 'black' ? 'color' : bet.spot === 'even' || bet.spot === 'odd' ? 'even-odd' : 'low-high', 2)}
+                  disabled={spinning}
+                >
+                  <Text style={[
+                    styles.bottomText,
+                    (bet.color || bet.spot === 'black') && styles.whiteText,
+                  ]}>
+                    {bet.label}
+                  </Text>
+                  {bets.has(bet.spot) && (
+                    <View style={styles.chipIndicator}>
+                      <Text style={styles.chipAmount}>{bets.get(bet.spot)!.amount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Chip Selector */}
+      <View style={styles.chipSelector}>
+        <Text style={styles.chipSelectorLabel}>Chip Value:</Text>
+        <View style={styles.chipOptions}>
+          {[5, 10, 25, 50, 100].map((value) => (
+            <TouchableOpacity
+              key={value}
+              style={[
+                styles.chipOption,
+                chipValue === value && styles.chipOptionActive,
+                value > remainingChips && styles.chipValueDisabled,
+              ]}
+              onPress={() => setChipValue(value)}
+              disabled={value > remainingChips}
+            >
+              <Text style={[
+                styles.chipOptionValueText,
+                chipValue === value && styles.chipOptionTextActive,
+              ]}>
+                {value}
               </Text>
-            ))
-          )}
-          <Text style={styles.totalBetText}>
-            Total bet: {currentBets.reduce((sum, bet) => sum + bet.amount, 0)} chips
-          </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
+      {/* Info */}
+      <View style={styles.infoBar}>
+        <Text style={styles.infoText}>Total Bet: {Array.from(bets.values()).reduce((sum, bet) => sum + bet.amount, 0)}</Text>
+        <Text style={styles.infoText}>Bets Placed: {bets.size}</Text>
+      </View>
+
+      {/* Controls */}
       <View style={styles.controls}>
         <TouchableOpacity
           style={[styles.controlButton, styles.clearButton]}
           onPress={clearBets}
-          disabled={spinning || currentBets.length === 0}
+          disabled={spinning || bets.size === 0}
         >
           <Text style={styles.controlButtonText}>Clear Bets</Text>
         </TouchableOpacity>
@@ -303,10 +453,10 @@ export default function RouletteGameScreen({ navigation, route }: any) {
         <TouchableOpacity
           style={[styles.controlButton, styles.spinButton, spinning && styles.disabledButton]}
           onPress={spin}
-          disabled={spinning || currentBets.length === 0}
+          disabled={spinning || bets.size === 0}
         >
           <Text style={styles.controlButtonText}>
-            {spinning ? 'Spinning...' : 'SPIN'}
+            {spinning ? 'SPINNING...' : 'SPIN'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -510,86 +660,224 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   gameContainer: {
-    padding: 20,
+    padding: 16,
   },
-  rouletteWheel: {
+  wheelContainer: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  wheelCenter: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
+  wheel: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: '#1e293b',
-    borderWidth: 8,
+    borderWidth: 6,
     borderColor: '#f59e0b',
     alignItems: 'center',
     justifyContent: 'center',
   },
   wheelNumber: {
-    fontSize: 48,
+    fontSize: 40,
     fontWeight: 'bold',
     color: '#ffffff',
   },
-  bettingArea: {
-    marginBottom: 24,
+  wheelColorDot: {
+    position: 'absolute',
+    bottom: 10,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#ffffff',
   },
-  sectionTitle: {
-    fontSize: 20,
+  tableTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#ffffff',
-    marginBottom: 16,
     textAlign: 'center',
+    marginBottom: 16,
   },
-  colorBets: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  colorBet: {
-    padding: 20,
+  rouletteTable: {
+    backgroundColor: '#065f46',
     borderRadius: 12,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    padding: 12,
+    borderWidth: 3,
+    borderColor: '#fbbf24',
   },
-  colorBetText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  colorBetOdds: {
-    fontSize: 16,
-    color: '#ffffff',
-    opacity: 0.8,
-  },
-  currentBetsContainer: {
-    backgroundColor: '#1e293b',
+  zeroCell: {
+    backgroundColor: '#10b981',
     padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: '#ffffff',
   },
-  currentBetsTitle: {
-    fontSize: 16,
+  zeroText: {
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#ffffff',
+  },
+  numberGrid: {
     marginBottom: 8,
   },
-  noBetsText: {
-    fontSize: 14,
-    color: '#64748b',
-    fontStyle: 'italic',
-  },
-  betText: {
-    fontSize: 14,
-    color: '#94a3b8',
+  tableRow: {
+    flexDirection: 'row',
     marginBottom: 4,
   },
-  totalBetText: {
+  numberCell: {
+    width: 50,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  numberText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  columnCell: {
+    width: 50,
+    height: 50,
+    backgroundColor: '#1e293b',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  sideText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  bottomBets: {
+    marginTop: 8,
+  },
+  dozenRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
+    gap: 4,
+  },
+  dozenCell: {
+    flex: 1,
+    height: 50,
+    backgroundColor: '#1e293b',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  evenMoneyRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  evenMoneyCell: {
+    flex: 1,
+    height: 50,
+    backgroundColor: '#1e293b',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  bottomText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  whiteText: {
+    color: '#ffffff',
+  },
+  winningCell: {
+    borderColor: '#fbbf24',
+    borderWidth: 4,
+    shadowColor: '#fbbf24',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  betPlacedCell: {
+    opacity: 0.9,
+  },
+  chipIndicator: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: '#fbbf24',
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  chipAmount: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  chipSelector: {
+    marginTop: 20,
+    marginBottom: 12,
+  },
+  chipSelectorLabel: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  chipOptions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  chipOption: {
+    backgroundColor: '#1e293b',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#334155',
+  },
+  chipOptionActive: {
+    backgroundColor: '#fbbf24',
+    borderColor: '#f59e0b',
+  },
+  chipValueDisabled: {
+    opacity: 0.4,
+  },
+  chipOptionValueText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  chipOptionTextActive: {
+    color: '#1f2937',
+  },
+  infoBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#1e293b',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  infoText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#f59e0b',
-    marginTop: 8,
   },
   controls: {
     flexDirection: 'row',
