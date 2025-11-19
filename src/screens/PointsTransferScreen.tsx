@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { Send, Gift, User, ArrowRight } from 'lucide-react-native';
+import { usePoints } from '../context/PointsContext';
 
 export default function PointsTransferScreen() {
   const [activeTab, setActiveTab] = useState<'transfer' | 'donate'>('transfer');
@@ -16,7 +17,7 @@ export default function PointsTransferScreen() {
   const [points, setPoints] = useState('');
   const [message, setMessage] = useState('');
 
-  const userPoints = 850; // This would come from your API
+  const { userPoints, subtractPoints } = usePoints();
 
   const handleTransfer = () => {
     if (!recipientPhone || !points) {
@@ -43,7 +44,8 @@ export default function PointsTransferScreen() {
         {
           text: 'Confirm',
           onPress: () => {
-            // API call would go here
+            // Deduct points
+            subtractPoints(pointsNum);
             Alert.alert('Success', 'Points transferred successfully!');
             setRecipientPhone('');
             setPoints('');

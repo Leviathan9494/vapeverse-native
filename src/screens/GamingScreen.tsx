@@ -7,9 +7,10 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Trophy, Coins } from 'lucide-react-native';
+import { usePoints } from '../context/PointsContext';
 
 export default function GamingScreen({ navigation }: any) {
-  const [userPoints, setUserPoints] = useState(850);
+  const { userPoints, updatePoints } = usePoints();
 
   const games = [
     {
@@ -59,7 +60,7 @@ export default function GamingScreen({ navigation }: any) {
     if (routeName) {
       navigation.navigate(routeName, {
         userPoints: userPoints,
-        onPointsChange: (newPoints: number) => setUserPoints(newPoints),
+        onPointsChange: (newPoints: number) => updatePoints(newPoints),
       });
     }
   };

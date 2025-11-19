@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import API_URL from '../config/api';
 import { useCart } from '../context/CartContext';
+import { usePoints } from '../context/PointsContext';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 45) / 2;
@@ -38,7 +39,7 @@ export default function ProductsScreen({ navigation }: any) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [userPoints, setUserPoints] = useState(850); // User's available points
+  const { userPoints, subtractPoints } = usePoints();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showRedeemModal, setShowRedeemModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
@@ -101,7 +102,7 @@ export default function ProductsScreen({ navigation }: any) {
 
     if (userPoints >= selectedProduct.pointsCost) {
       // Deduct points
-      setUserPoints(userPoints - selectedProduct.pointsCost);
+      subtractPoints(selectedProduct.pointsCost);
       setShowRedeemModal(false);
       
       Alert.alert(

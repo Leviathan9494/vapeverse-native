@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { Gift, Star, CheckCircle } from 'lucide-react-native';
+import { usePoints } from '../context/PointsContext';
 
 const rewardProducts = [
   {
@@ -83,7 +84,7 @@ interface RewardsScreenProps {
 }
 
 export default function RewardsScreen({ navigation, route }: RewardsScreenProps) {
-  const userPoints = route.params?.points || 850;
+  const { userPoints, subtractPoints } = usePoints();
 
   const handleRedeem = (product: any) => {
     if (userPoints < product.points) {
@@ -102,6 +103,7 @@ export default function RewardsScreen({ navigation, route }: RewardsScreenProps)
         {
           text: 'Redeem',
           onPress: () => {
+            subtractPoints(product.points);
             Alert.alert(
               'Success! 🎉',
               `You've redeemed ${product.name}! Check your account for details.`,

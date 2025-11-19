@@ -10,9 +10,11 @@ import {
 } from 'react-native';
 import { Trash2, Plus, Minus, ShoppingBag, CreditCard } from 'lucide-react-native';
 import { useCart } from '../context/CartContext';
+import { usePoints } from '../context/PointsContext';
 
 export default function CartScreen({ navigation }: any) {
   const { cart, removeFromCart, updateQuantity, clearCart, getCartTotal, getCartCount } = useCart();
+  const { addPoints } = usePoints();
 
   const handleCheckout = () => {
     if (cart.length === 0) {
@@ -28,10 +30,17 @@ export default function CartScreen({ navigation }: any) {
         {
           text: 'Pay Now',
           onPress: () => {
+            // Calculate points earned (1 point per dollar spent)
+            const totalSpent = getCartTotal();
+            const pointsEarned = Math.floor(totalSpent);
+            
+            // Add earned points
+            addPoints(pointsEarned);
+            
             // Here you would integrate payment processing
             Alert.alert(
               '🎉 Order Placed!',
-              `Your order of ${getCartCount()} items has been placed successfully!\n\nTotal: $${getCartTotal().toFixed(2)}`,
+              `Your order of ${getCartCount()} items has been placed successfully!\n\nTotal: $${totalSpent.toFixed(2)}\n\n✨ You earned ${pointsEarned} loyalty points!`,
               [
                 {
                   text: 'OK',

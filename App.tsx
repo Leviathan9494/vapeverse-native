@@ -19,6 +19,7 @@ import BlackjackGameScreen from './src/screens/BlackjackGameScreen';
 import SlotsGameScreen from './src/screens/SlotsGameScreen';
 import CartScreen from './src/screens/CartScreen';
 import { CartProvider } from './src/context/CartContext';
+import { PointsProvider } from './src/context/PointsContext';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -101,43 +102,45 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
-        <CartProvider>
-          <NavigationContainer>
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="Main" component={TabNavigator} />
-              <Stack.Screen 
-                name="Rewards" 
-                component={RewardsScreen}
-                options={{ headerShown: true, title: 'Rewards Store' }}
-              />
-              <Stack.Screen 
-                name="PokerGame" 
-                component={PokerGameScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen 
-                name="RouletteGame" 
-                component={RouletteGameScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen 
-                name="BlackjackGame" 
-                component={BlackjackGameScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen 
-                name="SlotsGame" 
-                component={SlotsGameScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen 
-                name="Cart" 
-                component={CartScreen}
-                options={{ headerShown: true, title: 'Shopping Cart' }}
-              />
-            </Stack.Navigator>
-          </NavigationContainer>
-        </CartProvider>
+        <PointsProvider>
+          <CartProvider>
+            <NavigationContainer>
+              <Stack.Navigator screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="Main" component={TabNavigator} />
+                <Stack.Screen 
+                  name="Rewards" 
+                  component={RewardsScreen}
+                  options={{ headerShown: true, title: 'Rewards Store' }}
+                />
+                <Stack.Screen 
+                  name="PokerGame" 
+                  component={PokerGameScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen 
+                  name="RouletteGame" 
+                  component={RouletteGameScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen 
+                  name="BlackjackGame" 
+                  component={BlackjackGameScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen 
+                  name="SlotsGame" 
+                  component={SlotsGameScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen 
+                  name="Cart" 
+                  component={CartScreen}
+                  options={{ headerShown: true, title: 'Shopping Cart' }}
+                />
+              </Stack.Navigator>
+            </NavigationContainer>
+          </CartProvider>
+        </PointsProvider>
       </SafeAreaProvider>
     </QueryClientProvider>
   );

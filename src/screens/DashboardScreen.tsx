@@ -9,12 +9,13 @@ import {
 } from 'react-native';
 import { TrendingUp, ShoppingBag, Award, DollarSign } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import { usePoints } from '../context/PointsContext';
 
 const { width } = Dimensions.get('window');
 
 export default function DashboardScreen() {
   const navigation = useNavigation();
-  const userPoints = 850;
+  const { userPoints } = usePoints();
   
   const stats = [
     { icon: ShoppingBag, label: 'Total Orders', value: '24', color: '#3b82f6' },
