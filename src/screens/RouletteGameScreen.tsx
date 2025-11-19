@@ -28,6 +28,7 @@ export default function RouletteGameScreen({ navigation, route }: any) {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<number | null>(null);
   const [spinAnimation] = useState(new Animated.Value(0));
+  const [ballAnimation] = useState(new Animated.Value(0));
   const [winningSpots, setWinningSpots] = useState<Set<string>>(new Set());
 
   const MIN_CHIPS = 10;
@@ -91,13 +92,24 @@ export default function RouletteGameScreen({ navigation, route }: any) {
 
     setSpinning(true);
     setWinningSpots(new Set());
+    setResult(null);
     
-    // Animate spin
-    Animated.timing(spinAnimation, {
-      toValue: 1,
-      duration: 3000,
-      useNativeDriver: true,
-    }).start(() => {
+    // Animate wheel and ball spin
+    spinAnimation.setValue(0);
+    ballAnimation.setValue(0);
+    
+    Animated.parallel([
+      Animated.timing(spinAnimation, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(ballAnimation, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       // Generate result
       const spinResult = Math.floor(Math.random() * 37); // 0-36
       setResult(spinResult);
@@ -247,7 +259,7 @@ export default function RouletteGameScreen({ navigation, route }: any) {
 
   const renderBettingTable = () => (
     <View style={styles.gameContainer}>
-      {/* Spinning Wheel */}
+      {/* Spinning Wheel with Ball */}
       <View style={styles.wheelContainer}>
         <Animated.View
           style={[
@@ -271,6 +283,43 @@ export default function RouletteGameScreen({ navigation, route }: any) {
             <View style={[styles.wheelColorDot, { backgroundColor: getNumberColorHex(result) }]} />
           )}
         </Animated.View>
+        
+        {/* Animated Ball */}
+        {spinning && (
+          <Animated.View
+            style={[
+              styles.rouletteBall,
+              {
+                transform: [
+                  {
+                    rotate: ballAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '-2880deg'], // Ball spins opposite direction, faster
+                    }),
+                  },
+                  {
+                    translateX: ballAnimation.interpolate({
+                      inputRange: [0, 0.7, 1],
+                      outputRange: [45, 45, 0], // Ball moves inward as it slows
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <View style={styles.ballInner} />
+          </Animated.View>
+        )}
+        
+        {/* Result Display */}
+        {!spinning && result !== null && (
+          <View style={styles.resultDisplay}>
+            <Text style={styles.resultLabel}>Result</Text>
+            <View style={[styles.resultBall, { backgroundColor: getNumberColorHex(result) }]}>
+              <Text style={styles.resultNumber}>{result}</Text>
+            </View>
+          </View>
+        )}
       </View>
 
       <Text style={styles.tableTitle}>Place Your Chips on the Table</Text>
@@ -665,6 +714,9 @@ const styles = StyleSheet.create({
   wheelContainer: {
     alignItems: 'center',
     marginBottom: 20,
+    position: 'relative',
+    height: 200,
+    justifyContent: 'center',
   },
   wheel: {
     width: 120,
@@ -675,6 +727,7 @@ const styles = StyleSheet.create({
     borderColor: '#f59e0b',
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   wheelNumber: {
     fontSize: 40,
@@ -689,6 +742,55 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 2,
     borderColor: '#ffffff',
+  },
+  rouletteBall: {
+    position: 'absolute',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  ballInner: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  resultDisplay: {
+    position: 'absolute',
+    top: -50,
+    alignItems: 'center',
+  },
+  resultLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#6b7280',
+    marginBottom: 8,
+  },
+  resultBall: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  resultNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ffffff',
   },
   tableTitle: {
     fontSize: 18,
