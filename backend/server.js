@@ -16,33 +16,38 @@ let products = [];
 function loadProducts() {
   return new Promise((resolve, reject) => {
     const results = [];
-    fs.createReadStream(path.join(__dirname, 'item_listings_local_matches.csv'))
+    fs.createReadStream(path.join(__dirname, 'products_export_2025-11-17_18-21-54.csv'))
       .pipe(csv())
       .on('data', (data) => {
         // Clean and parse the data
         const price = parseFloat(data.Price?.replace('$', '').trim()) || 0;
-        const qty = parseInt(data['Qty.']) || 0;
+        const stock = parseInt(data['Stock_Level']) || 0;
         
-        // Only include items with valid data and positive price
-        if (data.Item && price > 0 && data.Brand) {
+        // Only include visible items with valid data and positive price
+        if (data.Visible === 'S' && data.US_Title_Short && price > 0 && data.Brand) {
           // Calculate points cost (100 points = $1, so multiply price by 100)
           const pointsCost = Math.round(price * 100);
           
+          // Get the first image URL from the Images column (can be comma-separated)
+          const images = data.Images ? data.Images.split(',').map(img => img.trim()) : [];
+          const primaryImage = images.length > 0 ? images[0] : getImageForProduct(data.US_Title_Short, data.US_Category_2, data.US_Category_1);
+          
           results.push({
-            id: data['System ID'] || Math.random().toString(36).substr(2, 9),
-            name: data.Item,
+            id: data['Internal_ID'] || Math.random().toString(36).substr(2, 9),
+            name: data.US_Title_Short,
             brand: data.Brand,
             price: price,
             pointsCost: pointsCost, // Points needed to redeem this product
-            quantity: qty,
-            sku: data['Custom SKU'] || '',
-            category: data.Category || 'Uncategorized',
-            subcategory: data['Subcategory 1'] || '',
-            vendor: data.Vendor || '',
-            publishToEcom: data['Publish to eCom'] === 'Yes',
-            msrp: parseFloat(data.MSRP) || price,
-            // Generate image based on product name, subcategory, and category
-            image: getImageForProduct(data.Item, data['Subcategory 1'], data.Category),
+            quantity: stock,
+            sku: data['SKU'] || '',
+            category: data.US_Category_1 || 'Uncategorized',
+            subcategory: data.US_Category_2 || '',
+            description: data.US_Description_Short || '',
+            vendor: data.Supplier || '',
+            publishToEcom: true, // Already filtered by Visible='S'
+            msrp: parseFloat(data.Price_Old) || price,
+            image: primaryImage,
+            allImages: images, // Store all images for detailed view
           });
         }
       })
