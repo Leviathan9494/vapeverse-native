@@ -38,11 +38,12 @@ export default function PokerGameScreen({ navigation, route }: any) {
   const [pot, setPot] = useState(0);
   const [currentBet, setCurrentBet] = useState(0);
   const [playerBet, setPlayerBet] = useState(50);
+  const [gameChips, setGameChips] = useState(0); // Chips allocated for this game session
   const [players, setPlayers] = useState<Player[]>([]);
   const [communityCards, setCommunityCards] = useState<Card[]>([]);
   const [deck, setDeck] = useState<Card[]>([]);
   const [playerHand, setPlayerHand] = useState<Card[]>([]);
-  const [message, setMessage] = useState('Place your bet to start');
+  const [message, setMessage] = useState('How many points do you want to use?');
   const [canCheck, setCanCheck] = useState(false);
 
   // Create a deck of cards
@@ -68,22 +69,29 @@ export default function PokerGameScreen({ navigation, route }: any) {
     return deck.sort(() => Math.random() - 0.5);
   };
 
-  // Initialize game
+  // Initialize game - don't set players yet, wait for chip selection
   useEffect(() => {
-    const initialPlayers: Player[] = [
-      { id: 'player', name: 'You', chips: userPoints, cards: [], folded: false, currentBet: 0, isDealer: true },
-      { id: 'ai1', name: 'CPU 1', chips: 500, cards: [], folded: false, currentBet: 0, isDealer: false },
-      { id: 'ai2', name: 'CPU 2', chips: 800, cards: [], folded: false, currentBet: 0, isDealer: false },
-      { id: 'ai3', name: 'CPU 3', chips: 600, cards: [], folded: false, currentBet: 0, isDealer: false },
-    ];
-    setPlayers(initialPlayers);
+    // Players will be initialized after chip selection
   }, []);
 
   const startGame = () => {
-    if (playerBet > userPoints) {
-      Alert.alert('Insufficient Points', 'You don\'t have enough points');
+    if (gameChips === 0) {
+      Alert.alert('Select Chips', 'Please select how many points to use for this game');
       return;
     }
+
+    if (playerBet > gameChips) {
+      Alert.alert('Insufficient Chips', 'You don\'t have enough chips for this game');
+      return;
+    }
+
+    // Initialize players with selected chips
+    const initialPlayers: Player[] = [
+      { id: 'player', name: 'You', chips: gameChips, cards: [], folded: false, currentBet: 0, isDealer: true },
+      { id: 'ai1', name: 'CPU 1', chips: gameChips, cards: [], folded: false, currentBet: 0, isDealer: false },
+      { id: 'ai2', name: 'CPU 2', chips: gameChips, cards: [], folded: false, currentBet: 0, isDealer: false },
+      { id: 'ai3', name: 'CPU 3', chips: gameChips, cards: [], folded: false, currentBet: 0, isDealer: false },
+    ];
 
     const newDeck = createDeck();
     const hands: Card[][] = [[], [], [], []];
@@ -104,7 +112,7 @@ export default function PokerGameScreen({ navigation, route }: any) {
     setCanCheck(true);
 
     // Update players with cards and bets
-    const updatedPlayers = players.map((player, index) => ({
+    const updatedPlayers = initialPlayers.map((player, index) => ({
       ...player,
       cards: hands[index],
       currentBet: playerBet,
@@ -281,31 +289,36 @@ export default function PokerGameScreen({ navigation, route }: any) {
 
       const maxAiScore = Math.max(...aiScores);
       
+      const finalChips = players[0].chips + pot;
+      const totalPointsChange = userPoints - gameChips + finalChips; // Return chips won/lost
+      
       if (playerScore > maxAiScore) {
         setMessage(`🎉 You WIN ${pot} points!`);
-        onPointsChange(players[0].chips + pot);
         
         setTimeout(() => {
           Alert.alert(
             '🏆 Winner!',
-            `Congratulations! You won ${pot} points!\n\nYour hand was the best!`,
+            `Congratulations! You won ${pot} points!\n\nYour hand was the best!\n\nReturning to dashboard with ${finalChips} points.`,
             [
-              { text: 'Play Again', onPress: () => navigation.goBack() },
-              { text: 'Leave Table', onPress: () => navigation.goBack() },
+              { text: 'Leave Table', onPress: () => {
+                onPointsChange(totalPointsChange);
+                navigation.goBack();
+              }},
             ]
           );
         }, 1500);
       } else {
         setMessage('😔 You Lost. CPU won this round');
-        onPointsChange(players[0].chips);
         
         setTimeout(() => {
           Alert.alert(
             'Better Luck Next Time',
-            `The pot of ${pot} points went to the CPU.\n\nTry again!`,
+            `The pot of ${pot} points went to the CPU.\n\nYou have ${finalChips} points remaining.\n\nReturning to dashboard.`,
             [
-              { text: 'Play Again', onPress: () => navigation.goBack() },
-              { text: 'Leave Table', onPress: () => navigation.goBack() },
+              { text: 'Leave Table', onPress: () => {
+                onPointsChange(totalPointsChange);
+                navigation.goBack();
+              }},
             ]
           );
         }, 1500);
@@ -342,7 +355,7 @@ export default function PokerGameScreen({ navigation, route }: any) {
         <Text style={styles.headerTitle}>Texas Hold'em Poker</Text>
         <View style={styles.chipsDisplay}>
           <Coins color="#f59e0b" size={20} />
-          <Text style={styles.chipsText}>{players[0]?.chips || userPoints}</Text>
+          <Text style={styles.chipsText}>{gameChips > 0 ? players[0]?.chips || gameChips : userPoints}</Text>
         </View>
       </View>
 
@@ -405,7 +418,78 @@ export default function PokerGameScreen({ navigation, route }: any) {
 
       {/* Action Buttons */}
       <View style={styles.actionSection}>
-        {gamePhase === 'betting' && (
+        {gamePhase === 'betting' && gameChips === 0 && (
+          <>
+            <Text style={styles.chipSelectionTitle}>Select Game Chips</Text>
+            <Text style={styles.chipSelectionSubtitle}>
+              Choose how many points to use for this game
+            </Text>
+            <View style={styles.chipOptionsGrid}>
+              {[100, 250, 500, 1000].map((amount) => (
+                <TouchableOpacity
+                  key={amount}
+                  style={[
+                    styles.chipOptionButton,
+                    gameChips === amount && styles.chipOptionSelected,
+                    amount > userPoints && styles.chipOptionDisabled,
+                  ]}
+                  onPress={() => {
+                    setGameChips(amount);
+                    setPlayerBet(Math.min(50, amount));
+                  }}
+                  disabled={amount > userPoints}
+                >
+                  <Text style={[
+                    styles.chipOptionText,
+                    gameChips === amount && styles.chipOptionTextSelected,
+                    amount > userPoints && styles.chipOptionTextDisabled,
+                  ]}>
+                    {amount}
+                  </Text>
+                  <Text style={styles.chipOptionLabel}>points</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.customChipSection}>
+              <Text style={styles.customChipLabel}>Custom Amount:</Text>
+              <View style={styles.customChipControls}>
+                <TouchableOpacity
+                  style={styles.customChipButton}
+                  onPress={() => setGameChips(Math.max(50, gameChips - 50))}
+                >
+                  <Text style={styles.customChipButtonText}>-50</Text>
+                </TouchableOpacity>
+                <View style={styles.customChipDisplay}>
+                  <Text style={styles.customChipAmount}>{gameChips}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.customChipButton}
+                  onPress={() => setGameChips(Math.min(userPoints, gameChips + 50))}
+                >
+                  <Text style={styles.customChipButtonText}>+50</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={[
+                styles.confirmChipsButton,
+                gameChips === 0 && styles.confirmChipsButtonDisabled
+              ]} 
+              onPress={() => {
+                if (gameChips > 0) {
+                  setMessage('Place your initial bet to start the game');
+                }
+              }}
+              disabled={gameChips === 0}
+            >
+              <Text style={styles.confirmChipsButtonText}>
+                Confirm {gameChips} Points
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
+        
+        {gamePhase === 'betting' && gameChips > 0 && (
           <>
             <View style={styles.betControls}>
               <TouchableOpacity
@@ -416,11 +500,11 @@ export default function PokerGameScreen({ navigation, route }: any) {
               </TouchableOpacity>
               <View style={styles.betDisplay}>
                 <Text style={styles.betAmount}>{playerBet}</Text>
-                <Text style={styles.betLabel}>points</Text>
+                <Text style={styles.betLabel}>initial bet</Text>
               </View>
               <TouchableOpacity
                 style={styles.betButton}
-                onPress={() => setPlayerBet(Math.min(userPoints, playerBet + 25))}
+                onPress={() => setPlayerBet(Math.min(gameChips, playerBet + 25))}
               >
                 <Text style={styles.betButtonText}>+</Text>
               </TouchableOpacity>
@@ -706,5 +790,111 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.5,
+  },
+  chipSelectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  chipSelectionSubtitle: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  chipOptionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 16,
+  },
+  chipOptionButton: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#334155',
+    padding: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#334155',
+  },
+  chipOptionSelected: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#60a5fa',
+  },
+  chipOptionDisabled: {
+    opacity: 0.4,
+  },
+  chipOptionText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  chipOptionTextSelected: {
+    color: '#ffffff',
+  },
+  chipOptionTextDisabled: {
+    color: '#6b7280',
+  },
+  chipOptionLabel: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginTop: 4,
+  },
+  customChipSection: {
+    marginBottom: 16,
+  },
+  customChipLabel: {
+    fontSize: 14,
+    color: '#94a3b8',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  customChipControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  customChipButton: {
+    backgroundColor: '#334155',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  customChipButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  customChipDisplay: {
+    backgroundColor: '#1e293b',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#f59e0b',
+  },
+  customChipAmount: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#f59e0b',
+  },
+  confirmChipsButton: {
+    backgroundColor: '#10b981',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  confirmChipsButtonDisabled: {
+    backgroundColor: '#334155',
+    opacity: 0.5,
+  },
+  confirmChipsButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
