@@ -12,10 +12,11 @@ import {
   Alert,
   Modal,
 } from 'react-native';
-import { ShoppingCart, Star, Search, Award, X } from 'lucide-react-native';
+import { ShoppingCart, Star, Search, Award, X, Plus } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import API_URL from '../config/api';
+import { useCart } from '../context/CartContext';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 45) / 2;
@@ -33,13 +34,15 @@ interface Product {
   publishToEcom: boolean;
 }
 
-export default function ProductsScreen() {
+export default function ProductsScreen({ navigation }: any) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [userPoints, setUserPoints] = useState(850); // User's available points
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showRedeemModal, setShowRedeemModal] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const { addToCart, getCartCount } = useCart();
 
   // Fetch categories
   const { data: categories } = useQuery({
@@ -67,6 +70,25 @@ export default function ProductsScreen() {
   });
 
   const products = data?.products || [];
+
+  // Handle product click to show details
+  const handleProductClick = (product: Product) => {
+    setSelectedProduct(product);
+    setShowProductModal(true);
+  };
+
+  // Handle add to cart
+  const handleAddToCart = (product: Product) => {
+    addToCart(product);
+    Alert.alert(
+      '✅ Added to Cart',
+      `${product.name} has been added to your cart!`,
+      [
+        { text: 'Continue Shopping', style: 'cancel' },
+        { text: 'View Cart', onPress: () => navigation.navigate('Cart') },
+      ]
+    );
+  };
 
   // Handle points redemption
   const handleRedeemWithPoints = (product: Product) => {
@@ -98,7 +120,7 @@ export default function ProductsScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Points Balance Header */}
+      {/* Points Balance Header with Cart Icon */}
       <View style={styles.pointsHeader}>
         <View style={styles.pointsRow}>
           <Award color="#f59e0b" size={24} fill="#f59e0b" />
@@ -107,6 +129,19 @@ export default function ProductsScreen() {
             <Text style={styles.pointsValue}>{userPoints.toLocaleString()} pts</Text>
           </View>
         </View>
+        <TouchableOpacity 
+          style={styles.cartIconContainer}
+          onPress={() => navigation.navigate('Cart')}
+        >
+          <ShoppingCart color="#3b82f6" size={24} />
+          {getCartCount() > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{getCartCount()}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+      <View style={styles.pointsConversionRow}>
         <Text style={styles.pointsConversion}>100 points = $1.00</Text>
       </View>
       {/* Header */}
@@ -170,7 +205,11 @@ export default function ProductsScreen() {
         <>
           <View style={styles.productsGrid}>
             {products.map((product: Product) => (
-              <TouchableOpacity key={product.id} style={styles.productCard}>
+              <TouchableOpacity 
+                key={product.id} 
+                style={styles.productCard}
+                onPress={() => handleProductClick(product)}
+              >
                 <View style={styles.imageContainer}>
                   <Image
                     source={{ uri: product.image }}
@@ -208,9 +247,13 @@ export default function ProductsScreen() {
                         styles.addButton,
                         product.quantity === 0 && styles.addButtonDisabled
                       ]}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleAddToCart(product);
+                      }}
                       disabled={product.quantity === 0}
                     >
-                      <ShoppingCart color="#ffffff" size={16} />
+                      <Plus color="#ffffff" size={18} />
                     </TouchableOpacity>
                   </View>
 
@@ -388,6 +431,88 @@ export default function ProductsScreen() {
                   </TouchableOpacity>
                 </View>
               </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Product Detail Modal */}
+      <Modal
+        visible={showProductModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowProductModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowProductModal(false)}
+            >
+              <X color="#6b7280" size={24} />
+            </TouchableOpacity>
+
+            {selectedProduct && (
+              <ScrollView>
+                <Image
+                  source={{ uri: selectedProduct.image }}
+                  style={styles.modalProductImage}
+                  resizeMode="cover"
+                />
+
+                <Text style={styles.modalProductName}>{selectedProduct.name}</Text>
+                <Text style={styles.modalProductBrand}>{selectedProduct.brand}</Text>
+                <Text style={styles.modalCategoryText}>{selectedProduct.category}</Text>
+
+                <View style={styles.modalPriceSection}>
+                  <Text style={styles.modalPrice}>${selectedProduct.price.toFixed(2)}</Text>
+                  <View style={styles.modalPointsDisplay}>
+                    <Award color="#f59e0b" size={16} fill="#f59e0b" />
+                    <Text style={styles.modalPointsText}>
+                      {selectedProduct.pointsCost.toLocaleString()} points
+                    </Text>
+                  </View>
+                </View>
+
+                {selectedProduct.quantity > 0 ? (
+                  <Text style={styles.stockText}>✅ In Stock ({selectedProduct.quantity} available)</Text>
+                ) : (
+                  <Text style={styles.outOfStockTextLarge}>❌ Out of Stock</Text>
+                )}
+
+                <View style={styles.modalActionButtons}>
+                  <TouchableOpacity
+                    style={[
+                      styles.modalAddToCartButton,
+                      selectedProduct.quantity === 0 && styles.buttonDisabled
+                    ]}
+                    onPress={() => {
+                      handleAddToCart(selectedProduct);
+                      setShowProductModal(false);
+                    }}
+                    disabled={selectedProduct.quantity === 0}
+                  >
+                    <ShoppingCart color="#ffffff" size={20} />
+                    <Text style={styles.modalAddToCartText}>Add to Cart</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.modalRedeemButton,
+                      (userPoints < selectedProduct.pointsCost || selectedProduct.quantity === 0) && 
+                      styles.buttonDisabled
+                    ]}
+                    onPress={() => {
+                      setShowProductModal(false);
+                      setTimeout(() => handleRedeemWithPoints(selectedProduct), 300);
+                    }}
+                    disabled={userPoints < selectedProduct.pointsCost || selectedProduct.quantity === 0}
+                  >
+                    <Award color="#ffffff" size={20} fill="#ffffff" />
+                    <Text style={styles.modalRedeemText}>Redeem with Points</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
             )}
           </View>
         </View>
@@ -841,5 +966,102 @@ const styles = StyleSheet.create({
   },
   modalConfirmTextDisabled: {
     color: '#9ca3af',
+  },
+  cartIconContainer: {
+    position: 'relative',
+    padding: 8,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadgeText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  pointsConversionRow: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+  },
+  modalCategoryText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 16,
+  },
+  modalPriceSection: {
+    marginVertical: 16,
+  },
+  modalPrice: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#3b82f6',
+    marginBottom: 8,
+  },
+  modalPointsDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  modalPointsText: {
+    fontSize: 16,
+    color: '#f59e0b',
+    fontWeight: '600',
+  },
+  stockText: {
+    fontSize: 14,
+    color: '#10b981',
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  outOfStockTextLarge: {
+    fontSize: 14,
+    color: '#ef4444',
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  modalActionButtons: {
+    gap: 12,
+    marginTop: 16,
+  },
+  modalAddToCartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3b82f6',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  modalAddToCartText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalRedeemButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f59e0b',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  modalRedeemText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  buttonDisabled: {
+    backgroundColor: '#e5e7eb',
+    opacity: 0.6,
   },
 });

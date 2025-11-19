@@ -14,6 +14,8 @@ import PointsTransferScreen from './src/screens/PointsTransferScreen';
 import GamingScreen from './src/screens/GamingScreen';
 import RewardsScreen from './src/screens/RewardsScreen';
 import PokerGameScreen from './src/screens/PokerGameScreen';
+import CartScreen from './src/screens/CartScreen';
+import { CartProvider } from './src/context/CartContext';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -96,21 +98,28 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
-        <NavigationContainer>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Main" component={TabNavigator} />
-            <Stack.Screen 
-              name="Rewards" 
-              component={RewardsScreen}
-              options={{ headerShown: true, title: 'Rewards Store' }}
-            />
-            <Stack.Screen 
-              name="PokerGame" 
-              component={PokerGameScreen}
-              options={{ headerShown: false }}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
+        <CartProvider>
+          <NavigationContainer>
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="Main" component={TabNavigator} />
+              <Stack.Screen 
+                name="Rewards" 
+                component={RewardsScreen}
+                options={{ headerShown: true, title: 'Rewards Store' }}
+              />
+              <Stack.Screen 
+                name="PokerGame" 
+                component={PokerGameScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen 
+                name="Cart" 
+                component={CartScreen}
+                options={{ headerShown: true, title: 'Shopping Cart' }}
+              />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </CartProvider>
       </SafeAreaProvider>
     </QueryClientProvider>
   );
