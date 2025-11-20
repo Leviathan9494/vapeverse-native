@@ -122,6 +122,17 @@ export default function RouletteGameScreen({ navigation, route }: any) {
       const spinResult = Math.floor(Math.random() * 37); // 0-36
       setResult(spinResult);
       
+      // Calculate where the result should land (align wheel with ball position)
+      const winningIndex = wheelNumbers.indexOf(spinResult);
+      const finalRotation = -(winningIndex * 360 / wheelNumbers.length); // Negative to counter clockwise
+      
+      // Rotate wheel to show winning number at top (ball position)
+      Animated.timing(spinAnimation, {
+        toValue: finalRotation / 360, // Convert to 0-1 range
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+      
       // Calculate winnings and mark winning spots
       let winnings = 0;
       const winning = new Set<string>();
@@ -301,6 +312,7 @@ export default function RouletteGameScreen({ navigation, route }: any) {
                 {wheelNumbers.map((num, index) => {
                   const angle = (index * 360) / wheelNumbers.length;
                   const color = getNumberColorHex(num);
+                  const isWinning = !spinning && result === num;
                   return (
                     <View
                       key={index}
@@ -314,7 +326,11 @@ export default function RouletteGameScreen({ navigation, route }: any) {
                         },
                       ]}
                     >
-                      <View style={[styles.numberPocket, { backgroundColor: color }]}>
+                      <View style={[
+                        styles.numberPocket, 
+                        { backgroundColor: color },
+                        isWinning && styles.winningPocket
+                      ]}>
                         <Text style={styles.pocketNumber}>{num}</Text>
                       </View>
                     </View>
@@ -326,26 +342,33 @@ export default function RouletteGameScreen({ navigation, route }: any) {
                 </View>
               </Animated.View>
               
-              {/* Animated Ball */}
-              <Animated.View
-                style={[
-                  styles.spinningBall,
-                  {
-                    transform: [
-                      {
-                        rotate: ballAnimation.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ['0deg', '-2880deg'],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              >
-                <View style={styles.ballOrbit}>
+              {/* Animated Ball - Position at top where winning number will align */}
+              {spinning ? (
+                <Animated.View
+                  style={[
+                    styles.spinningBall,
+                    {
+                      transform: [
+                        {
+                          rotate: ballAnimation.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0deg', '-2880deg'],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  <View style={styles.ballOrbit}>
+                    <View style={styles.ballVisual} />
+                  </View>
+                </Animated.View>
+              ) : result !== null && (
+                // Show ball at top position (where result landed)
+                <View style={styles.ballAtTop}>
                   <View style={styles.ballVisual} />
                 </View>
-              </Animated.View>
+              )}
             </View>
           </View>
         </View>
@@ -818,6 +841,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ffffff',
   },
+  winningPocket: {
+    borderWidth: 3,
+    borderColor: '#fbbf24',
+    transform: [{ scale: 1.2 }],
+    shadowColor: '#fbbf24',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 10,
+  },
   pocketNumber: {
     fontSize: 10,
     fontWeight: 'bold',
@@ -860,6 +893,13 @@ const styles = StyleSheet.create({
     elevation: 10,
     borderWidth: 1,
     borderColor: '#d1d5db',
+  },
+  ballAtTop: {
+    position: 'absolute',
+    top: 5,
+    left: '50%',
+    marginLeft: -6,
+    zIndex: 10,
   },
   simpleWheelContainer: {
     alignItems: 'center',
