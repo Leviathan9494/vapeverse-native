@@ -109,12 +109,12 @@ export default function RouletteGameScreen({ navigation, route }: any) {
     Animated.parallel([
       Animated.timing(spinAnimation, {
         toValue: 1,
-        duration: 3000,
+        duration: 5000,
         useNativeDriver: true,
       }),
       Animated.timing(ballAnimation, {
         toValue: 1,
-        duration: 3000,
+        duration: 5000,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -138,7 +138,7 @@ export default function RouletteGameScreen({ navigation, route }: any) {
       const totalPointsChange = userPoints - gameChips + finalChips;
 
       setSpinning(false);
-      setShowDetailedWheel(false);
+      // Keep wheel visible to show result
       spinAnimation.setValue(0);
 
       // Show result
@@ -149,6 +149,7 @@ export default function RouletteGameScreen({ navigation, route }: any) {
             `Ball landed on ${spinResult}!\nYou won ${winnings} chips!\n\nFinal chips: ${finalChips}`,
             [
               { text: 'Play Again', onPress: () => {
+                setShowDetailedWheel(false);
                 setBets(new Map());
                 setWinningSpots(new Set());
                 setRemainingChips(finalChips);
@@ -156,6 +157,7 @@ export default function RouletteGameScreen({ navigation, route }: any) {
               {
                 text: 'Leave Table',
                 onPress: () => {
+                  setShowDetailedWheel(false);
                   onPointsChange(totalPointsChange);
                   navigation.goBack();
                 },
@@ -169,6 +171,7 @@ export default function RouletteGameScreen({ navigation, route }: any) {
             finalChips >= MIN_CHIPS
               ? [
                   { text: 'Play Again', onPress: () => {
+                    setShowDetailedWheel(false);
                     setBets(new Map());
                     setWinningSpots(new Set());
                     setRemainingChips(finalChips);
@@ -176,6 +179,7 @@ export default function RouletteGameScreen({ navigation, route }: any) {
                   {
                     text: 'Leave Table',
                     onPress: () => {
+                      setShowDetailedWheel(false);
                       onPointsChange(totalPointsChange);
                       navigation.goBack();
                     },
@@ -185,6 +189,7 @@ export default function RouletteGameScreen({ navigation, route }: any) {
                   {
                     text: 'Leave Table',
                     onPress: () => {
+                      setShowDetailedWheel(false);
                       onPointsChange(totalPointsChange);
                       navigation.goBack();
                     },
@@ -268,10 +273,12 @@ export default function RouletteGameScreen({ navigation, route }: any) {
 
   const renderBettingTable = () => (
     <View style={styles.gameContainer}>
-      {/* Detailed Roulette Wheel - Show at top when spinning */}
+      {/* Detailed Roulette Wheel - Show at top when spinning or showing result */}
       {showDetailedWheel && (
         <View style={styles.detailedWheelContainer}>
-          <Text style={styles.spinningText}>🎰 SPINNING... 🎰</Text>
+          <Text style={styles.spinningText}>
+            {spinning ? '🎰 SPINNING... 🎰' : result !== null ? `✨ LANDED ON ${result}! ✨` : '🎰 SPINNING... 🎰'}
+          </Text>
           <View style={styles.wheelFrame}>
             {/* Outer rim */}
             <View style={styles.wheelOuter}>

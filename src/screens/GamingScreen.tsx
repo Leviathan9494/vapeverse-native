@@ -24,7 +24,7 @@ export default function GamingScreen({ navigation }: any) {
     {
       id: 'roulette',
       name: 'Roulette',
-      icon: '🎯',
+      icon: '☸️',
       color: '#8b5cf6',
       description: 'Spin the wheel',
       minBet: 10,
