@@ -29,6 +29,11 @@ export default function SlotsGameScreen({ navigation, route }: any) {
   const [betAmount, setBetAmount] = useState(5);
   const [reels, setReels] = useState<string[]>(['🍒', '🍒', '🍒']);
   const [spinning, setSpinning] = useState(false);
+  const [spinningSymbols, setSpinningSymbols] = useState<string[][]>([
+    ['🍒', '🍋', '🍊'],
+    ['🍒', '🍋', '🍊'],
+    ['🍒', '🍋', '🍊'],
+  ]);
   const [spinAnimations] = useState([
     new Animated.Value(0),
     new Animated.Value(0),
@@ -61,34 +66,53 @@ export default function SlotsGameScreen({ navigation, route }: any) {
     setSpinning(true);
     setRemainingChips(remainingChips - betAmount);
 
-    // Animate reels
+    // Generate final results
+    const finalResult = [getRandomSymbol(), getRandomSymbol(), getRandomSymbol()];
+
+    // Create spinning symbol arrays (showing multiple symbols per reel)
+    const spinningReels = [0, 1, 2].map(() => {
+      const symbols = [];
+      for (let i = 0; i < 20; i++) {
+        symbols.push(getRandomSymbol());
+      }
+      return symbols;
+    });
+    setSpinningSymbols(spinningReels);
+
+    // Animate each reel with staggered timing
+    const durations = [2000, 2500, 3000]; // Each reel stops at different time
     spinAnimations.forEach((anim, index) => {
+      anim.setValue(0);
       Animated.timing(anim, {
         toValue: 1,
-        duration: 1000 + index * 300,
+        duration: durations[index],
         useNativeDriver: true,
       }).start(() => {
-        anim.setValue(0);
+        // Set final symbol when reel stops
+        setReels(prev => {
+          const newReels = [...prev];
+          newReels[index] = finalResult[index];
+          return newReels;
+        });
       });
     });
 
-    // Generate results after animation
+    // Check results after all reels stop
     setTimeout(() => {
-      const result = [getRandomSymbol(), getRandomSymbol(), getRandomSymbol()];
-      setReels(result);
+      setReels(finalResult);
       setSpinning(false);
 
       // Check for win
-      const allMatch = result[0] === result[1] && result[1] === result[2];
-      const twoMatch = result[0] === result[1] || result[1] === result[2] || result[0] === result[2];
+      const allMatch = finalResult[0] === finalResult[1] && finalResult[1] === finalResult[2];
+      const twoMatch = finalResult[0] === finalResult[1] || finalResult[1] === finalResult[2] || finalResult[0] === finalResult[2];
 
       let winnings = 0;
       let message = '';
 
       if (allMatch) {
-        const multiplier = SYMBOL_VALUES[result[0]] || 2;
+        const multiplier = SYMBOL_VALUES[finalResult[0]] || 2;
         winnings = betAmount * multiplier;
-        message = `🎉 JACKPOT!\nTriple ${result[0]}!\nWon ${winnings} chips (${multiplier}x)`;
+        message = `🎉 JACKPOT!\nTriple ${finalResult[0]}!\nWon ${winnings} chips (${multiplier}x)`;
       } else if (twoMatch) {
         winnings = betAmount * 2;
         message = `Nice! Pair match!\nWon ${winnings} chips (2x)`;
@@ -195,24 +219,39 @@ export default function SlotsGameScreen({ navigation, route }: any) {
         
         <View style={styles.reelsContainer}>
           {reels.map((symbol, index) => (
-            <Animated.View
-              key={index}
-              style={[
-                styles.reel,
-                {
-                  transform: [
-                    {
-                      translateY: spinAnimations[index].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, -200],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <Text style={styles.reelSymbol}>{symbol}</Text>
-            </Animated.View>
+            <View key={index} style={styles.reelWrapper}>
+              <View style={styles.reelWindow}>
+                {spinning ? (
+                  // Show multiple spinning symbols
+                  <Animated.View
+                    style={[
+                      styles.spinningReel,
+                      {
+                        transform: [
+                          {
+                            translateY: spinAnimations[index].interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, -1400], // Scroll through many symbols
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  >
+                    {spinningSymbols[index].map((sym, symIndex) => (
+                      <View key={symIndex} style={styles.symbolSlot}>
+                        <Text style={styles.reelSymbol}>{sym}</Text>
+                      </View>
+                    ))}
+                  </Animated.View>
+                ) : (
+                  // Show final result when not spinning
+                  <View style={styles.symbolSlot}>
+                    <Text style={styles.reelSymbol}>{symbol}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
           ))}
         </View>
 
@@ -539,8 +578,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     marginBottom: 20,
-    overflow: 'hidden',
     height: 120,
+  },
+  reelWrapper: {
+    width: 100,
+    height: 120,
+    backgroundColor: '#1f2937',
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 4,
+    borderColor: '#fbbf24',
+  },
+  reelWindow: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spinningReel: {
+    alignItems: 'center',
+  },
+  symbolSlot: {
+    width: 92,
+    height: 112,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   reel: {
     width: 100,
