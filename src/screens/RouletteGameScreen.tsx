@@ -30,8 +30,15 @@ export default function RouletteGameScreen({ navigation, route }: any) {
   const [spinAnimation] = useState(new Animated.Value(0));
   const [ballAnimation] = useState(new Animated.Value(0));
   const [winningSpots, setWinningSpots] = useState<Set<string>>(new Set());
+  const [showDetailedWheel, setShowDetailedWheel] = useState(false);
 
   const MIN_CHIPS = 10;
+  
+  // Roulette wheel numbers in actual order (European roulette)
+  const wheelNumbers = [
+    0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
+    5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26
+  ];
   const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
   const blackNumbers = [2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35];
   
@@ -93,6 +100,7 @@ export default function RouletteGameScreen({ navigation, route }: any) {
     setSpinning(true);
     setWinningSpots(new Set());
     setResult(null);
+    setShowDetailedWheel(true);
     
     // Animate wheel and ball spin
     spinAnimation.setValue(0);
@@ -130,6 +138,7 @@ export default function RouletteGameScreen({ navigation, route }: any) {
       const totalPointsChange = userPoints - gameChips + finalChips;
 
       setSpinning(false);
+      setShowDetailedWheel(false);
       spinAnimation.setValue(0);
 
       // Show result
@@ -259,68 +268,100 @@ export default function RouletteGameScreen({ navigation, route }: any) {
 
   const renderBettingTable = () => (
     <View style={styles.gameContainer}>
-      {/* Spinning Wheel with Ball */}
-      <View style={styles.wheelContainer}>
-        <Animated.View
-          style={[
-            styles.wheel,
-            {
-              transform: [
-                {
-                  rotate: spinAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['0deg', '1440deg'],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <Text style={styles.wheelNumber}>
-            {result !== null ? result : '?'}
-          </Text>
-          {result !== null && (
-            <View style={[styles.wheelColorDot, { backgroundColor: getNumberColorHex(result) }]} />
-          )}
-        </Animated.View>
-        
-        {/* Animated Ball */}
-        {spinning && (
-          <Animated.View
-            style={[
-              styles.rouletteBall,
-              {
-                transform: [
+      {/* Detailed Roulette Wheel - Show at top when spinning */}
+      {showDetailedWheel && (
+        <View style={styles.detailedWheelContainer}>
+          <Text style={styles.spinningText}>🎰 SPINNING... 🎰</Text>
+          <View style={styles.wheelFrame}>
+            {/* Outer rim */}
+            <View style={styles.wheelOuter}>
+              {/* Rotating wheel with numbers */}
+              <Animated.View
+                style={[
+                  styles.wheelInner,
                   {
-                    rotate: ballAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0deg', '-2880deg'], // Ball spins opposite direction, faster
-                    }),
+                    transform: [
+                      {
+                        rotate: spinAnimation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0deg', '1440deg'],
+                        }),
+                      },
+                    ],
                   },
+                ]}
+              >
+                {wheelNumbers.map((num, index) => {
+                  const angle = (index * 360) / wheelNumbers.length;
+                  const color = getNumberColorHex(num);
+                  return (
+                    <View
+                      key={index}
+                      style={[
+                        styles.wheelSegment,
+                        {
+                          transform: [
+                            { rotate: `${angle}deg` },
+                            { translateY: -80 },
+                          ],
+                        },
+                      ]}
+                    >
+                      <View style={[styles.numberPocket, { backgroundColor: color }]}>
+                        <Text style={styles.pocketNumber}>{num}</Text>
+                      </View>
+                    </View>
+                  );
+                })}
+                {/* Center circle */}
+                <View style={styles.wheelCenter}>
+                  <Text style={styles.wheelCenterText}>🎯</Text>
+                </View>
+              </Animated.View>
+              
+              {/* Animated Ball */}
+              <Animated.View
+                style={[
+                  styles.spinningBall,
                   {
-                    translateX: ballAnimation.interpolate({
-                      inputRange: [0, 0.7, 1],
-                      outputRange: [45, 45, 0], // Ball moves inward as it slows
-                    }),
+                    transform: [
+                      {
+                        rotate: ballAnimation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0deg', '-2880deg'],
+                        }),
+                      },
+                    ],
                   },
-                ],
-              },
-            ]}
-          >
-            <View style={styles.ballInner} />
-          </Animated.View>
-        )}
-        
-        {/* Result Display */}
-        {!spinning && result !== null && (
-          <View style={styles.resultDisplay}>
-            <Text style={styles.resultLabel}>Result</Text>
-            <View style={[styles.resultBall, { backgroundColor: getNumberColorHex(result) }]}>
-              <Text style={styles.resultNumber}>{result}</Text>
+                ]}
+              >
+                <View style={styles.ballOrbit}>
+                  <View style={styles.ballVisual} />
+                </View>
+              </Animated.View>
             </View>
           </View>
-        )}
-      </View>
+        </View>
+      )}
+
+      {/* Simple Result Display */}
+      {!showDetailedWheel && (
+        <View style={styles.simpleWheelContainer}>
+          {result !== null ? (
+            <View style={styles.lastResultDisplay}>
+              <Text style={styles.lastResultLabel}>Last Result</Text>
+              <View style={[styles.resultBall, { backgroundColor: getNumberColorHex(result) }]}>
+                <Text style={styles.resultNumber}>{result}</Text>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.readyToSpin}>
+              <Text style={styles.readyText}>🎯</Text>
+              <Text style={styles.readyLabel}>Ready to Spin!</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       <Text style={styles.tableTitle}>Place Your Chips on the Table</Text>
 
@@ -711,72 +752,126 @@ const styles = StyleSheet.create({
   gameContainer: {
     padding: 16,
   },
-  wheelContainer: {
+  detailedWheelContainer: {
     alignItems: 'center',
     marginBottom: 20,
-    position: 'relative',
-    height: 200,
-    justifyContent: 'center',
+    paddingTop: 10,
   },
-  wheel: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#1e293b',
-    borderWidth: 6,
-    borderColor: '#f59e0b',
+  spinningText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#f59e0b',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  wheelFrame: {
+    padding: 10,
+    backgroundColor: '#78350f',
+    borderRadius: 150,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 15,
+  },
+  wheelOuter: {
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: '#92400e',
+    borderWidth: 8,
+    borderColor: '#fbbf24',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  wheelInner: {
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: '#065f46',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
-  wheelNumber: {
-    fontSize: 40,
+  wheelSegment: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  numberPocket: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ffffff',
+  },
+  pocketNumber: {
+    fontSize: 10,
     fontWeight: 'bold',
     color: '#ffffff',
   },
-  wheelColorDot: {
+  wheelCenter: {
     position: 'absolute',
-    bottom: 10,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#fbbf24',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
     borderColor: '#ffffff',
   },
-  rouletteBall: {
-    position: 'absolute',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+  wheelCenterText: {
+    fontSize: 24,
   },
-  ballInner: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+  spinningBall: {
+    position: 'absolute',
+    width: 240,
+    height: 240,
+  },
+  ballOrbit: {
+    position: 'absolute',
+    top: 10,
+    left: '50%',
+    marginLeft: -6,
+  },
+  ballVisual: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: '#ffffff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
-    elevation: 8,
+    elevation: 10,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#d1d5db',
   },
-  resultDisplay: {
-    position: 'absolute',
-    top: -50,
+  simpleWheelContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingVertical: 15,
+  },
+  lastResultDisplay: {
     alignItems: 'center',
   },
-  resultLabel: {
+  lastResultLabel: {
     fontSize: 14,
     fontWeight: 'bold',
     color: '#6b7280',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   resultBall: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
@@ -788,9 +883,21 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   resultNumber: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#ffffff',
+  },
+  readyToSpin: {
+    alignItems: 'center',
+  },
+  readyText: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  readyLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#6b7280',
   },
   tableTitle: {
     fontSize: 18,
